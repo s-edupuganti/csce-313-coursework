@@ -6,8 +6,8 @@
 	Original author of the starter code
 	
 	Please include your name and UIN below
-	Name:
-	UIN:
+	Name: Sidharth Edupuganti
+	UIN: 628004560
  */
 #include "common.h"
 #include "FIFOreqchannel.h"
@@ -22,6 +22,7 @@ int main(int argc, char *argv[]){
 	int p = 1;
 	double t = 0.0;
 	int e = 1;
+	int d = 1;
 	
 	string filename = "";
 	while ((opt = getopt(argc, argv, "p:t:e:f:")) != -1) {
@@ -38,17 +39,58 @@ int main(int argc, char *argv[]){
 			case 'f':
 				filename = optarg;
 				break;
+			case 'd':
+				d = atoi (optarg);
 		}
 	}
 	
     // sending a non-sense message, you need to change this
-    char buf [MAX_MESSAGE]; // 256
-    datamsg x (p, t, e);
+    // char buf [MAX_MESSAGE]; // 256
+    // datamsg x (p, t, e);
+	// // datamsg y (1, 0, 1);
+
+	// // cout << "For person " << p <<", at time " << t << ", the value of ecg "<< e << " is " << reply << endl;
 	
-	chan.cwrite (&x, sizeof (datamsg)); // question
-	double reply;
-	int nbytes = chan.cread (&reply, sizeof(double)); //answer
-	cout << "For person " << p <<", at time " << t << ", the value of ecg "<< e <<" is " << reply << endl;
+	// chan.cwrite (&x, sizeof (datamsg)); // question
+	// double reply;
+	// int nbytes = chan.cread (&reply, sizeof(double)); //answer
+	// cout << "For person " << p <<", at time " << t << ", the value of ecg "<< e <<" is " << reply << endl;
+	// cout << "# of Datapoints: " << d << endl;
+
+	if (t < 0) {
+
+		std::ofstream myFile;
+		myFile.open ("x1.csv");
+
+		for (double i = 0; i < 4; i = i + 0.004) {
+
+			char buf [MAX_MESSAGE];
+			datamsg x (p, i, 1);
+			chan.cwrite (&x, sizeof (datamsg)); // question
+			double reply;
+			int nbytes = chan.cread (&reply, sizeof(double)); //answer
+
+			datamsg y (p, i, 2);
+			chan.cwrite (&y, sizeof (datamsg)); // question
+			double replyTwo;
+			int nbytesTwo = chan.cread (&replyTwo, sizeof(double)); //answer
+
+			myFile << i << "," << reply << "," << replyTwo << "\n"; 
+
+		}
+
+		myFile.close();
+
+	} else {
+
+		char buf [MAX_MESSAGE]; // 256
+		datamsg x (p, t, e);
+
+		chan.cwrite (&x, sizeof (datamsg)); // question
+		double reply;
+		int nbytes = chan.cread (&reply, sizeof(double)); //answer
+		cout << "For person " << p <<", at time " << t << ", the value of ecg "<< e <<" is " << reply << endl;
+	}
 	
 	filemsg fm (0,0);
 	string fname = "teslkansdlkjflasjdf.dat";
