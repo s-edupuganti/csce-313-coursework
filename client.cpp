@@ -91,16 +91,37 @@ int main(int argc, char *argv[]){
 		int nbytes = chan.cread (&reply, sizeof(double)); //answer
 		cout << "For person " << p <<", at time " << t << ", the value of ecg "<< e <<" is " << reply << endl;
 	}
+
+	if (filename == "test.csv") {
+		
+		filemsg fm (0,0);
+		string fname = "test.csv";
+		
+		int len = sizeof (filemsg) + fname.size()+1;
+		char buf2 [len];
+		memcpy (buf2, &fm, sizeof (filemsg));
+		strcpy (buf2 + sizeof (filemsg), fname.c_str());
+		chan.cwrite (buf2, len);  // I want the file length;
+
+		__int64_t fileLength;
+
+		chan.cread(&fileLength, sizeof(__int64_t));
+
+		cout << "Fil length is: " << fileLength << endl;
+
+
+
+		
+
+
+	}
+
 	
-	filemsg fm (0,0);
-	string fname = "teslkansdlkjflasjdf.dat";
 	
-	int len = sizeof (filemsg) + fname.size()+1;
-	char buf2 [len];
-	memcpy (buf2, &fm, sizeof (filemsg));
-	strcpy (buf2 + sizeof (filemsg), fname.c_str());
-	chan.cwrite (buf2, len);  // I want the file length;
+
 	
+	// _int64_t fileLength = chan.cwrite (buf2, len);
+
 	
 	// closing the channel    
     MESSAGE_TYPE m = QUIT_MSG;
