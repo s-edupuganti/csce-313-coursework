@@ -23,9 +23,11 @@ int main(int argc, char *argv[]){
 	double t = 0.0;
 	int e = 1;
 	int d = 1;
+	// fix-me
+	int m = MAX_MESSAGE;
 	
 	string filename = "";
-	while ((opt = getopt(argc, argv, "p:t:e:f:")) != -1) {
+	while ((opt = getopt(argc, argv, "p:t:e:f:m:")) != -1) {
 		switch (opt) {
 			case 'p':
 				p = atoi (optarg);
@@ -41,6 +43,8 @@ int main(int argc, char *argv[]){
 				break;
 			case 'd':
 				d = atoi (optarg);
+			case 'm':
+				m = atoi (optarg);
 		}
 	}
 	
@@ -60,6 +64,10 @@ int main(int argc, char *argv[]){
 	if (t < 0) {
 
 		std::ofstream myFile;
+
+		// const char* path = "received"
+
+
 		myFile.open ("x1.csv");
 
 		for (double i = 0; i < 4; i = i + 0.004) {
@@ -92,10 +100,10 @@ int main(int argc, char *argv[]){
 		cout << "For person " << p <<", at time " << t << ", the value of ecg "<< e <<" is " << reply << endl;
 	}
 
-	if (filename == "test.csv") {
+	if (filename == "hello.csv") {
 		
 		filemsg fm (0,0);
-		string fname = "test.csv";
+		string fname = "hello.csv";
 		
 		int len = sizeof (filemsg) + fname.size()+1;
 		char buf2 [len];
@@ -104,26 +112,57 @@ int main(int argc, char *argv[]){
 		chan.cwrite (buf2, len);  // I want the file length;
 
 		__int64_t fileLength;
-
 		chan.cread(&fileLength, sizeof(__int64_t));
-
-		cout << "Fil length is: " << fileLength << endl;
-
+		cout << "File length is: " << fileLength << endl;
 
 
+
+		int requests = ceil(fileLength / (1.0 * m));
+		cout << "Number of requests is: " << requests << endl;
+
+		filemsg msg(0, 0);
+
+		int offset = 0;
+		int length = m;
+
+		ofstream requestFile;
+
+		requestFile.open("received/hello.csv");
+
+
+		for (int i = 0; i < requests; i++) {
+
+				cout << "(" << offset << "," << length << ")" << endl;
+
+				msg.offset = offset;
+				msg.length = length;
+
+				int len = sizeof (filemsg) + fname.size()+1;
+				char buf2 [len];
+				memcpy (buf2, &msg, sizeof (filemsg));
+				strcpy (buf2 + sizeof (filemsg), fname.c_str());
+				chan.cwrite (buf2, len);  // I want the file length;
+
+				char x[length];
+
+				requestFile.write(x, chan.cread(&x, length));
+
+				offset += length;
+
+				if (offset + length > fileLength) {
+					length = fileLength - offset;
+				}
 		
+		}
 
+		requestFile.close();
 
 	}
 
 	
-	
-
-	
-	// _int64_t fileLength = chan.cwrite (buf2, len);
 
 	
 	// closing the channel    
-    MESSAGE_TYPE m = QUIT_MSG;
-    chan.cwrite (&m, sizeof (MESSAGE_TYPE));
+    MESSAGE_TYPE q = QUIT_MSG;
+    chan.cwrite (&q, sizeof (MESSAGE_TYPE));
 }
