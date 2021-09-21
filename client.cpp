@@ -16,7 +16,8 @@ using namespace std;
 
 
 int main(int argc, char *argv[]){
-    FIFORequestChannel chan ("control", FIFORequestChannel::CLIENT_SIDE);
+
+
 	
 	int opt;
 	int p = 1;
@@ -25,9 +26,15 @@ int main(int argc, char *argv[]){
 	int d = 1;
 	// fix-me
 	int m = MAX_MESSAGE;
+	// string c = "";
+
+	bool isFile = false;
+	bool makeNewChan = false;
+
+	// bool isFile = fale;
 	
 	string filename = "";
-	while ((opt = getopt(argc, argv, "p:t:e:f:m:")) != -1) {
+	while ((opt = getopt(argc, argv, "p:t:e:f:m:c:")) != -1) {
 		switch (opt) {
 			case 'p':
 				p = atoi (optarg);
@@ -40,129 +47,161 @@ int main(int argc, char *argv[]){
 				break;
 			case 'f':
 				filename = optarg;
+				isFile = true;
 				break;
 			case 'd':
 				d = atoi (optarg);
+				break;
 			case 'm':
 				m = atoi (optarg);
+				break;
+			case 'c':
+				makeNewChan = true;
+				break;
 		}
 	}
-	
-    // sending a non-sense message, you need to change this
-    // char buf [MAX_MESSAGE]; // 256
-    // datamsg x (p, t, e);
-	// // datamsg y (1, 0, 1);
 
-	// // cout << "For person " << p <<", at time " << t << ", the value of ecg "<< e << " is " << reply << endl;
-	
-	// chan.cwrite (&x, sizeof (datamsg)); // question
-	// double reply;
-	// int nbytes = chan.cread (&reply, sizeof(double)); //answer
-	// cout << "For person " << p <<", at time " << t << ", the value of ecg "<< e <<" is " << reply << endl;
-	// cout << "# of Datapoints: " << d << endl;
+	// int pid = fork();
 
-	if (t < 0) {
+	// if (pid == 0) {
 
-		std::ofstream myFile;
-
-		// const char* path = "received"
+	// } else {
 
 
-		myFile.open ("x1.csv");
+		FIFORequestChannel chan ("control", FIFORequestChannel::CLIENT_SIDE);
 
-		for (double i = 0; i < 4; i = i + 0.004) {
 
-			char buf [MAX_MESSAGE];
-			datamsg x (p, i, 1);
+		if (t < 0) {
+
+			std::ofstream myFile;
+
+			myFile.open ("x1.csv");
+
+			for (double i = 0; i < 4; i = i + 0.004) {
+
+				char buf [MAX_MESSAGE];
+				datamsg x (p, i, 1);
+				chan.cwrite (&x, sizeof (datamsg)); // question
+				double reply;
+				int nbytes = chan.cread (&reply, sizeof(double)); //answer
+
+				datamsg y (p, i, 2);
+				chan.cwrite (&y, sizeof (datamsg)); // question
+				double replyTwo;
+				int nbytesTwo = chan.cread (&replyTwo, sizeof(double)); //answer
+
+				myFile << i << "," << reply << "," << replyTwo << "\n"; 
+
+			}
+
+			myFile.close();
+
+		} else {
+
+			char buf [MAX_MESSAGE]; // 256
+			datamsg x (p, t, e);
+
 			chan.cwrite (&x, sizeof (datamsg)); // question
 			double reply;
 			int nbytes = chan.cread (&reply, sizeof(double)); //answer
+			cout << "For person " << p <<", at time " << t << ", the value of ecg "<< e <<" is " << reply << endl;
+		}
 
-			datamsg y (p, i, 2);
-			chan.cwrite (&y, sizeof (datamsg)); // question
-			double replyTwo;
-			int nbytesTwo = chan.cread (&replyTwo, sizeof(double)); //answer
+		if (isFile) {
+			
+			filemsg fm (0,0);
+			string fname = filename;
+			
+			int len = sizeof (filemsg) + fname.size()+1;
+			char buf2 [len];
+			memcpy (buf2, &fm, sizeof (filemsg));
+			strcpy (buf2 + sizeof (filemsg), fname.c_str());
+			chan.cwrite (buf2, len);  // I want the file length;
 
-			myFile << i << "," << reply << "," << replyTwo << "\n"; 
+			__int64_t fileLength;
+			chan.cread(&fileLength, sizeof(__int64_t));
+			cout << "File length is: " << fileLength << endl;
+
+
+
+			int requests = ceil(fileLength / (1.0 * m));
+			cout << "Number of requests is: " << requests << endl;
+
+			filemsg msg(0, 0);
+
+			int offset = 0;
+			int length = m;
+
+			ofstream requestFile;
+
+			requestFile.open(("received/" + filename));
+
+
+			for (int i = 0; i < requests; i++) {
+
+					cout << "(" << offset << "," << length << ")" << endl;
+
+					msg.offset = offset;
+					msg.length = length;
+
+					int len = sizeof (filemsg) + fname.size()+1;
+					char buf2 [len];
+					memcpy (buf2, &msg, sizeof (filemsg));
+					strcpy (buf2 + sizeof (filemsg), fname.c_str());
+					chan.cwrite (buf2, len);  // I want the file length;
+
+					char x[length];
+
+					requestFile.write(x, chan.cread(&x, length));
+
+					offset += length;
+
+					if (offset + length > fileLength) {
+						length = fileLength - offset;
+					}
+			
+			}
+
+			requestFile.close();
 
 		}
 
-		myFile.close();
+		if (makeNewChan) {
 
-	} else {
+			MESSAGE_TYPE nc = NEWCHANNEL_MSG;
+			chan.cwrite(&nc, sizeof(MESSAGE_TYPE));
+			char ncChar[m];
+			chan.cread(&ncChar, sizeof(ncChar));
 
-		char buf [MAX_MESSAGE]; // 256
-		datamsg x (p, t, e);
+			string channelName = ncChar;
 
-		chan.cwrite (&x, sizeof (datamsg)); // question
-		double reply;
-		int nbytes = chan.cread (&reply, sizeof(double)); //answer
-		cout << "For person " << p <<", at time " << t << ", the value of ecg "<< e <<" is " << reply << endl;
-	}
+			cout << "The channel name is: " << channelName << endl;
 
-	if (filename == "hello.csv") {
-		
-		filemsg fm (0,0);
-		string fname = "hello.csv";
-		
-		int len = sizeof (filemsg) + fname.size()+1;
-		char buf2 [len];
-		memcpy (buf2, &fm, sizeof (filemsg));
-		strcpy (buf2 + sizeof (filemsg), fname.c_str());
-		chan.cwrite (buf2, len);  // I want the file length;
+			FIFORequestChannel newChan (channelName, FIFORequestChannel::CLIENT_SIDE);
 
-		__int64_t fileLength;
-		chan.cread(&fileLength, sizeof(__int64_t));
-		cout << "File length is: " << fileLength << endl;
+			datamsg dm1 (5, 1, 2);
 
+			newChan.cwrite (&dm1, sizeof (datamsg)); // question
+			double testOutput1;
+			int nbytes1 = newChan.cread (&testOutput1, sizeof(double)); //answer
+			cout << testOutput1 << endl;
+
+			datamsg dm2 (10, 0.36, 1);
+
+			newChan.cwrite (&dm2, sizeof (datamsg)); // question
+			double testOutput2;
+			int nbytes2 = newChan.cread (&testOutput2, sizeof(double)); //answer
+			cout << testOutput2 << endl;
 
 
-		int requests = ceil(fileLength / (1.0 * m));
-		cout << "Number of requests is: " << requests << endl;
-
-		filemsg msg(0, 0);
-
-		int offset = 0;
-		int length = m;
-
-		ofstream requestFile;
-
-		requestFile.open("received/hello.csv");
-
-
-		for (int i = 0; i < requests; i++) {
-
-				cout << "(" << offset << "," << length << ")" << endl;
-
-				msg.offset = offset;
-				msg.length = length;
-
-				int len = sizeof (filemsg) + fname.size()+1;
-				char buf2 [len];
-				memcpy (buf2, &msg, sizeof (filemsg));
-				strcpy (buf2 + sizeof (filemsg), fname.c_str());
-				chan.cwrite (buf2, len);  // I want the file length;
-
-				char x[length];
-
-				requestFile.write(x, chan.cread(&x, length));
-
-				offset += length;
-
-				if (offset + length > fileLength) {
-					length = fileLength - offset;
-				}
-		
+			
 		}
 
-		requestFile.close();
+		
 
-	}
-
-	
-
-	
-	// closing the channel    
-    MESSAGE_TYPE q = QUIT_MSG;
-    chan.cwrite (&q, sizeof (MESSAGE_TYPE));
+		
+		// closing the channel    
+		MESSAGE_TYPE q = QUIT_MSG;
+		chan.cwrite (&q, sizeof (MESSAGE_TYPE));
+	// }
 }
