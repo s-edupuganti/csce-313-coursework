@@ -11,9 +11,11 @@
  */
 #include "common.h"
 #include "FIFOreqchannel.h"
+#include <sys/wait.h>
+#include <chrono>
 
 using namespace std;
-
+typedef std::chrono::high_resolution_clock Clock;
 
 int main(int argc, char *argv[]){
 
@@ -30,20 +32,27 @@ int main(int argc, char *argv[]){
 
 	bool isFile = false;
 	bool makeNewChan = false;
+	bool patientGiven = false;
+	bool timeGiven = false;
+	bool ecgGiven = false;
+	bool bufferGiven = false;
 
 	// bool isFile = fale;
 	
 	string filename = "";
-	while ((opt = getopt(argc, argv, "p:t:e:f:m:c:")) != -1) {
+	while ((opt = getopt(argc, argv, "p:t:e:f:m:c")) != -1) {
 		switch (opt) {
 			case 'p':
 				p = atoi (optarg);
+				patientGiven = true;
 				break;
 			case 't':
 				t = atof (optarg);
+				timeGiven = true;
 				break;
 			case 'e':
 				e = atoi (optarg);
+				ecgGiven = true;
 				break;
 			case 'f':
 				filename = optarg;
@@ -54,6 +63,7 @@ int main(int argc, char *argv[]){
 				break;
 			case 'm':
 				m = atoi (optarg);
+				bufferGiven = true;
 				break;
 			case 'c':
 				makeNewChan = true;
@@ -61,21 +71,29 @@ int main(int argc, char *argv[]){
 		}
 	}
 
-	// int pid = fork();
+	pid_t process = fork();
 
-	// if (pid == 0) {
+	if (process == 0) {
 
-	// } else {
+			char *argv[] = {"./server", "-m", (char*)to_string(m).c_str(), NULL};
+        	execvp(argv[0], argv);		
+
+	} else {
 
 
 		FIFORequestChannel chan ("control", FIFORequestChannel::CLIENT_SIDE);
 
 
+
 		if (t < 0) {
+
 
 			std::ofstream myFile;
 
 			myFile.open ("x1.csv");
+
+			// cout << "Requesting 1000 datapoints...";
+
 
 			for (double i = 0; i < 4; i = i + 0.004) {
 
@@ -90,13 +108,15 @@ int main(int argc, char *argv[]){
 				double replyTwo;
 				int nbytesTwo = chan.cread (&replyTwo, sizeof(double)); //answer
 
+
 				myFile << i << "," << reply << "," << replyTwo << "\n"; 
 
 			}
 
+
 			myFile.close();
 
-		} else {
+		} else if (patientGiven && timeGiven && ecgGiven && (t >= 0)) {
 
 			char buf [MAX_MESSAGE]; // 256
 			datamsg x (p, t, e);
@@ -136,10 +156,12 @@ int main(int argc, char *argv[]){
 
 			requestFile.open(("received/" + filename));
 
+			auto startTime = Clock::now();
+
 
 			for (int i = 0; i < requests; i++) {
 
-					cout << "(" << offset << "," << length << ")" << endl;
+					// cout << "(" << offset << "," << length << ")" << endl;
 
 					msg.offset = offset;
 					msg.length = length;
@@ -164,6 +186,10 @@ int main(int argc, char *argv[]){
 
 			requestFile.close();
 
+			auto endTime = Clock::now();
+
+			cout << "Amount of time to Request: " << chrono::duration_cast<chrono::nanoseconds>(endTime - startTime).count() << " nanoseconds" << endl;
+
 		}
 
 		if (makeNewChan) {
@@ -177,9 +203,12 @@ int main(int argc, char *argv[]){
 
 			cout << "The channel name is: " << channelName << endl;
 
+
 			FIFORequestChannel newChan (channelName, FIFORequestChannel::CLIENT_SIDE);
 
 			datamsg dm1 (5, 1, 2);
+
+			cout << "Testing data point for patient 5, at time of 2.00 and ecg 2..." << endl;
 
 			newChan.cwrite (&dm1, sizeof (datamsg)); // question
 			double testOutput1;
@@ -188,20 +217,31 @@ int main(int argc, char *argv[]){
 
 			datamsg dm2 (10, 0.36, 1);
 
+			cout << "Testing data point for patient 10, at time of 0.36 and ecg 1..." << endl;
+
 			newChan.cwrite (&dm2, sizeof (datamsg)); // question
 			double testOutput2;
 			int nbytes2 = newChan.cread (&testOutput2, sizeof(double)); //answer
 			cout << testOutput2 << endl;
+
+			MESSAGE_TYPE closeNC = QUIT_MSG;
+			newChan.cwrite(&closeNC, sizeof (MESSAGE_TYPE));
+			// wait(0);
+
+			
 
 
 			
 		}
 
 		
-
-		
 		// closing the channel    
 		MESSAGE_TYPE q = QUIT_MSG;
 		chan.cwrite (&q, sizeof (MESSAGE_TYPE));
-	// }
+		
+		wait(0);
+	
+	}
+
+	// return 0;
 }
