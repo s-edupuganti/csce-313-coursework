@@ -19,16 +19,12 @@ typedef std::chrono::high_resolution_clock Clock;
 
 int main(int argc, char *argv[]){
 
-
-	
 	int opt;
 	int p = 1;
 	double t = 0.0;
 	int e = 1;
 	int d = 1;
-	// fix-me
 	int m = MAX_MESSAGE;
-	// string c = "";
 
 	bool isFile = false;
 	bool makeNewChan = false;
@@ -37,7 +33,8 @@ int main(int argc, char *argv[]){
 	bool ecgGiven = false;
 	bool bufferGiven = false;
 
-	// bool isFile = fale;
+	auto startTime = Clock::now();
+	auto endTime = Clock::now();
 	
 	string filename = "";
 	while ((opt = getopt(argc, argv, "p:t:e:f:m:c")) != -1) {
@@ -94,6 +91,8 @@ int main(int argc, char *argv[]){
 
 			// cout << "Requesting 1000 datapoints...";
 
+			startTime = Clock::now();
+
 
 			for (double i = 0; i < 4; i = i + 0.004) {
 
@@ -113,6 +112,9 @@ int main(int argc, char *argv[]){
 
 			}
 
+			endTime = Clock::now();
+
+			cout << "Amount of time to request 1000 datapoints: " << chrono::duration_cast<chrono::nanoseconds>(endTime - startTime).count() << " nanoseconds" << endl;
 
 			myFile.close();
 
@@ -156,7 +158,7 @@ int main(int argc, char *argv[]){
 
 			requestFile.open(("received/" + filename));
 
-			auto startTime = Clock::now();
+			startTime = Clock::now();
 
 
 			for (int i = 0; i < requests; i++) {
@@ -184,11 +186,14 @@ int main(int argc, char *argv[]){
 			
 			}
 
+			endTime = Clock::now();
+
+			cout << "Amount of time to request file: " << chrono::duration_cast<chrono::nanoseconds>(endTime - startTime).count() << " nanoseconds" << endl;
+
+
 			requestFile.close();
 
-			auto endTime = Clock::now();
 
-			cout << "Amount of time to Request: " << chrono::duration_cast<chrono::nanoseconds>(endTime - startTime).count() << " nanoseconds" << endl;
 
 		}
 
@@ -228,10 +233,6 @@ int main(int argc, char *argv[]){
 			newChan.cwrite(&closeNC, sizeof (MESSAGE_TYPE));
 			// wait(0);
 
-			
-
-
-			
 		}
 
 		
