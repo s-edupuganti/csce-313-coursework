@@ -211,16 +211,16 @@ int main(int argc, char *argv[]){
 
 			FIFORequestChannel newChan (channelName, FIFORequestChannel::CLIENT_SIDE);
 
-			datamsg dm1 (5, 1, 2);
+			datamsg dm1 (5, 1, 2); // -0.1
 
-			cout << "Testing data point for patient 5, at time of 2.00 and ecg 2..." << endl;
+			cout << "Testing data point for patient 5, at time of 1.00 and ecg 2..." << endl;
 
 			newChan.cwrite (&dm1, sizeof (datamsg)); // question
 			double testOutput1;
 			int nbytes1 = newChan.cread (&testOutput1, sizeof(double)); //answer
 			cout << testOutput1 << endl;
 
-			datamsg dm2 (10, 0.36, 1);
+			datamsg dm2 (10, 0.36, 1); // -0.245
 
 			cout << "Testing data point for patient 10, at time of 0.36 and ecg 1..." << endl;
 
