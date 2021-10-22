@@ -19,9 +19,12 @@ typedef std::chrono::high_resolution_clock Clock;
 
 int main(int argc, char *argv[]){
 
+	double t = 0.0;
+
+	string setIPCMethod = "f";
+
 	int opt;
 	int p = 1;
-	double t = 0.0;
 	int e = 1;
 	int d = 1;
 	int m = MAX_MESSAGE;
@@ -37,7 +40,7 @@ int main(int argc, char *argv[]){
 	auto endTime = Clock::now();
 	
 	string filename = "";
-	while ((opt = getopt(argc, argv, "p:t:e:f:m:c")) != -1) {
+	while ((opt = getopt(argc, argv, "p:t:e:f:m:c:i")) != -1) {
 		switch (opt) {
 			case 'p':
 				p = atoi (optarg);
@@ -65,7 +68,10 @@ int main(int argc, char *argv[]){
 			case 'c':
 				makeNewChan = true;
 				break;
-		}
+			case 'i':
+				setIPCMethod = optarg;
+				break;
+		}	
 	}
 
 	pid_t process = fork();
@@ -76,6 +82,17 @@ int main(int argc, char *argv[]){
         	execvp(argv[0], argv);		
 
 	} else {
+
+		// RequestChannel* IPCMethod;
+
+		// if (setIPCMethod == "f") {
+		// 	IPCMethod = new FIFORequestChannel ("control", RequestChannel::CLIENT_SIDE);
+		// } else if (setIPCMethod == "m") {
+
+		// } else if (setIPCMethod == "s") {
+
+
+		// }
 
 
 		FIFORequestChannel chan ("control", FIFORequestChannel::CLIENT_SIDE);
