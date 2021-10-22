@@ -13,7 +13,10 @@
 #include <vector>
 #include <math.h>
 #include <unistd.h>
+
 #include "FIFOreqchannel.h"
+#include "MQreqchannel.h"
+
 using namespace std;
 
 
@@ -22,22 +25,37 @@ char* buffer = NULL; // buffer used by the server, allocated in the main
 
 
 int nchannels = 0;
+string setIPCMethod = "f";
 pthread_mutex_t newchannel_lock;
-void handle_process_loop(FIFORequestChannel *_channel);
+void handle_process_loop(RequestChannel *_channel);
 char ival;
 vector<string> all_data [NUM_PERSONS];
 
 
-void process_newchannel_request (FIFORequestChannel *_channel){
+void process_newchannel_request (RequestChannel *_channel){
 	nchannels++;
 	string new_channel_name = "data" + to_string(nchannels) + "_";
 	char buf [30];
 	strcpy (buf, new_channel_name.c_str());
 	_channel->cwrite(buf, new_channel_name.size()+1);
 
-	FIFORequestChannel *data_channel = new FIFORequestChannel (new_channel_name, FIFORequestChannel::SERVER_SIDE);
+	// FIFORequestChannel *data_channel = new FIFORequestChannel (new_channel_name, FIFORequestChannel::SERVER_SIDE);
+	// thread thread_for_client (handle_process_loop, data_channel);
+	// thread_for_client.detach();
+
+	RequestChannel *data_channel;
+
+	if (setIPCMethod == "f") {
+		data_channel = new FIFORequestChannel (new_channel_name, RequestChannel::SERVER_SIDE);
+	} else if (setIPCMethod == "q") {
+		data_channel = new MQRequestChannel (new_channel_name, RequestChannel::SERVER_SIDE);
+	}
+
+
 	thread thread_for_client (handle_process_loop, data_channel);
 	thread_for_client.detach();
+
+
 }
 
 void populate_file_data (int person){
@@ -73,7 +91,7 @@ double get_data_from_memory (int person, double seconds, int ecgno){
 		return ecg2;
 }
 
-void process_file_request (FIFORequestChannel* rc, char* request){
+void process_file_request (RequestChannel* rc, char* request){
 	
 	filemsg f = *(filemsg *) request;
 	string filename = request + sizeof (filemsg);
@@ -112,19 +130,19 @@ void process_file_request (FIFORequestChannel* rc, char* request){
 	fclose (fp);
 }
 
-void process_data_request (FIFORequestChannel* rc, char* request){
+void process_data_request (RequestChannel* rc, char* request){
 	datamsg* d = (datamsg* ) request;
 	double data = get_data_from_memory (d->person, d->seconds, d->ecgno);
 	rc->cwrite(&data, sizeof (double));
 }
 
-void process_unknown_request(FIFORequestChannel *rc){
+void process_unknown_request(RequestChannel *rc){
 	char a = 0;
 	rc->cwrite (&a, sizeof (a));
 }
 
 
-int process_request(FIFORequestChannel *rc, char* _request)
+int process_request(RequestChannel *rc, char* _request)
 {
 	MESSAGE_TYPE m = *(MESSAGE_TYPE *) _request;
 	if (m == DATA_MSG){
@@ -140,7 +158,7 @@ int process_request(FIFORequestChannel *rc, char* _request)
 	}
 }
 
-void handle_process_loop(FIFORequestChannel *channel){
+void handle_process_loop(RequestChannel *channel){
 	/* creating a buffer per client to process incoming requests
 	and prepare a response */
 	char* buffer = new char [buffercapacity];
@@ -171,10 +189,14 @@ void handle_process_loop(FIFORequestChannel *channel){
 int main(int argc, char *argv[]){
 	buffercapacity = MAX_MESSAGE;
 	int opt;
-	while ((opt = getopt(argc, argv, "m:")) != -1) {
+	while ((opt = getopt(argc, argv, "m:i:")) != -1) {
 		switch (opt) {
 			case 'm':
 				buffercapacity = atoi (optarg);
+				break;
+			case 'i':
+				setIPCMethod = optarg;
+				cout << "IPC METHOD SWITCHED TO: " << setIPCMethod << endl;
 				break;
 		}
 	}
@@ -183,7 +205,18 @@ int main(int argc, char *argv[]){
 		populate_file_data(i+1);
 	}
 	
-	FIFORequestChannel* control_channel = new FIFORequestChannel ("control", FIFORequestChannel::SERVER_SIDE);
+	// FIFORequestChannel* control_channel = new FIFORequestChannel ("control", FIFORequestChannel::SERVER_SIDE);
+
+	RequestChannel* control_channel;
+
+	if (setIPCMethod == "f") {
+		control_channel = new FIFORequestChannel ("control", FIFORequestChannel::SERVER_SIDE);
+	} else if (setIPCMethod == "q") {
+		control_channel = new MQRequestChannel ("control", MQRequestChannel::SERVER_SIDE);
+	} else if (setIPCMethod == "s") {
+
+	}
+
 	handle_process_loop (control_channel);
 	cout << "Server terminated" << endl;
 }

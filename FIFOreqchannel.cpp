@@ -8,6 +8,7 @@ using namespace std;
 
 FIFORequestChannel::FIFORequestChannel(const string _name, const Side _side) : RequestChannel(_name, _side) {
 	pipe1 = "fifo_" + my_name + "1";
+	// cout << "MY_NAME: " << my_name << endl;
 	pipe2 = "fifo_" + my_name + "2";
 		
 	if (_side == SERVER_SIDE){

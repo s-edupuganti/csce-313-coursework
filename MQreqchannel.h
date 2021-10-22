@@ -21,8 +21,8 @@ private:
 	int wfd;
 	int rfd;
 	
-	string pipe1, pipe2;
-	int open_pipe(string _pipe_name, int mode);
+	string mq1, mq2;
+	int open_messageQueue(string _mq_name, int mode);
 	
 public:
 	MQRequestChannel(const string _name, const Side _side);

@@ -11,6 +11,7 @@
  */
 #include "common.h"
 #include "FIFOreqchannel.h"
+#include "MQreqchannel.h"
 #include <sys/wait.h>
 #include <chrono>
 
@@ -40,7 +41,7 @@ int main(int argc, char *argv[]){
 	auto endTime = Clock::now();
 	
 	string filename = "";
-	while ((opt = getopt(argc, argv, "p:t:e:f:m:c:i")) != -1) {
+	while ((opt = getopt(argc, argv, "p:t:e:f:m:c:i:")) != -1) {
 		switch (opt) {
 			case 'p':
 				p = atoi (optarg);
@@ -83,19 +84,19 @@ int main(int argc, char *argv[]){
 
 	} else {
 
-		// RequestChannel* IPCMethod;
+		RequestChannel* chan;
 
-		// if (setIPCMethod == "f") {
-		// 	IPCMethod = new FIFORequestChannel ("control", RequestChannel::CLIENT_SIDE);
-		// } else if (setIPCMethod == "m") {
-
-		// } else if (setIPCMethod == "s") {
-
-
-		// }
+		if (setIPCMethod == "f") {
+			chan = new FIFORequestChannel ("control", RequestChannel::CLIENT_SIDE);
+		} else if (setIPCMethod == "q") {
+			chan = new MQRequestChannel ("control", RequestChannel::CLIENT_SIDE);
+		} else if (setIPCMethod == "s") {
 
 
-		FIFORequestChannel chan ("control", FIFORequestChannel::CLIENT_SIDE);
+		}
+
+
+		// FIFORequestChannel chan ("control", FIFORequestChannel::CLIENT_SIDE);
 
 
 
@@ -115,14 +116,14 @@ int main(int argc, char *argv[]){
 
 				char buf [MAX_MESSAGE];
 				datamsg x (p, i, 1);
-				chan.cwrite (&x, sizeof (datamsg)); // question
+				chan->cwrite (&x, sizeof (datamsg)); // question
 				double reply;
-				int nbytes = chan.cread (&reply, sizeof(double)); //answer
+				int nbytes = chan->cread (&reply, sizeof(double)); //answer
 
 				datamsg y (p, i, 2);
-				chan.cwrite (&y, sizeof (datamsg)); // question
+				chan->cwrite (&y, sizeof (datamsg)); // question
 				double replyTwo;
-				int nbytesTwo = chan.cread (&replyTwo, sizeof(double)); //answer
+				int nbytesTwo = chan->cread (&replyTwo, sizeof(double)); //answer
 
 
 				myFile << i << "," << reply << "," << replyTwo << "\n"; 
@@ -140,9 +141,9 @@ int main(int argc, char *argv[]){
 			char buf [MAX_MESSAGE]; // 256
 			datamsg x (p, t, e);
 
-			chan.cwrite (&x, sizeof (datamsg)); // question
+			chan->cwrite (&x, sizeof (datamsg)); // question
 			double reply;
-			int nbytes = chan.cread (&reply, sizeof(double)); //answer
+			int nbytes = chan->cread (&reply, sizeof(double)); //answer
 			cout << "For person " << p <<", at time " << t << ", the value of ecg "<< e <<" is " << reply << endl;
 		}
 
@@ -155,10 +156,10 @@ int main(int argc, char *argv[]){
 			char buf2 [len];
 			memcpy (buf2, &fm, sizeof (filemsg));
 			strcpy (buf2 + sizeof (filemsg), fname.c_str());
-			chan.cwrite (buf2, len);  // I want the file length;
+			chan->cwrite (buf2, len);  // I want the file length;
 
 			__int64_t fileLength;
-			chan.cread(&fileLength, sizeof(__int64_t));
+			chan->cread(&fileLength, sizeof(__int64_t));
 			cout << "File length is: " << fileLength << endl;
 
 
@@ -189,11 +190,11 @@ int main(int argc, char *argv[]){
 					char buf2 [len];
 					memcpy (buf2, &msg, sizeof (filemsg));
 					strcpy (buf2 + sizeof (filemsg), fname.c_str());
-					chan.cwrite (buf2, len);  // I want the file length;
+					chan->cwrite (buf2, len);  // I want the file length;
 
 					char x[length];
 
-					requestFile.write(x, chan.cread(&x, length));
+					requestFile.write(x, chan->cread(&x, length));
 
 					offset += length;
 
@@ -217,9 +218,9 @@ int main(int argc, char *argv[]){
 		if (makeNewChan) {
 
 			MESSAGE_TYPE nc = NEWCHANNEL_MSG;
-			chan.cwrite(&nc, sizeof(MESSAGE_TYPE));
+			chan->cwrite(&nc, sizeof(MESSAGE_TYPE));
 			char ncChar[m];
-			chan.cread(&ncChar, sizeof(ncChar));
+			chan->cread(&ncChar, sizeof(ncChar));
 
 			string channelName = ncChar;
 
@@ -255,7 +256,7 @@ int main(int argc, char *argv[]){
 		
 		// closing the channel    
 		MESSAGE_TYPE q = QUIT_MSG;
-		chan.cwrite (&q, sizeof (MESSAGE_TYPE));
+		chan->cwrite (&q, sizeof (MESSAGE_TYPE));
 		
 		wait(0);
 	
