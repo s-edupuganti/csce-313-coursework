@@ -32,11 +32,12 @@ MQRequestChannel::MQRequestChannel(const string _name, const Side _side) : Reque
 }
 
 MQRequestChannel::~MQRequestChannel(){ 
+	
 	mq_close(wfd);
 	mq_close(rfd);
 
-	remove(mq1.c_str());
-	remove(mq2.c_str());
+	mq_unlink(mq1.c_str());
+	mq_unlink(mq2.c_str());
 }
 
 int MQRequestChannel::open_messageQueue(string _mq_name, int mode){

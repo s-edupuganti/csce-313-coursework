@@ -214,6 +214,7 @@ int main(int argc, char *argv[]){
 	} else if (setIPCMethod == "q") {
 		control_channel = new MQRequestChannel ("control", MQRequestChannel::SERVER_SIDE);
 	} else if (setIPCMethod == "s") {
+		// control_channel = new SHMRequestChannel ("control", SHMRequestChannel::SERVER_SIDE);
 
 	}
 

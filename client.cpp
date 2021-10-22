@@ -92,8 +92,7 @@ int main(int argc, char *argv[]){
 			chan = new MQRequestChannel ("control", RequestChannel::CLIENT_SIDE);
 			cout << "USING MQREQCHANNEL!" << endl;
 		} else if (setIPCMethod == "s") {
-
-
+			// chan = new SHMRequestchannel ("control", RequestChannel::CLIENT_SIDE);
 		}
 
 
