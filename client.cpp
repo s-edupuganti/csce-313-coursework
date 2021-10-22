@@ -90,6 +90,7 @@ int main(int argc, char *argv[]){
 			chan = new FIFORequestChannel ("control", RequestChannel::CLIENT_SIDE);
 		} else if (setIPCMethod == "q") {
 			chan = new MQRequestChannel ("control", RequestChannel::CLIENT_SIDE);
+			cout << "USING MQREQCHANNEL!" << endl;
 		} else if (setIPCMethod == "s") {
 
 
@@ -138,12 +139,12 @@ int main(int argc, char *argv[]){
 
 		} else if (patientGiven && timeGiven && ecgGiven && (t >= 0)) {
 
-			char buf [MAX_MESSAGE]; // 256
+			// char buf [MAX_MESSAGE]; // 256
 			datamsg x (p, t, e);
 
 			chan->cwrite (&x, sizeof (datamsg)); // question
 			double reply;
-			int nbytes = chan->cread (&reply, sizeof(double)); //answer
+			chan->cread (&reply, sizeof(double)); //answer
 			cout << "For person " << p <<", at time " << t << ", the value of ecg "<< e <<" is " << reply << endl;
 		}
 
