@@ -3,12 +3,13 @@
 #define _FIFOreqchannel_H_
 
 #include "common.h"
+#include "requestChannel.h"
 
-class FIFORequestChannel
+class FIFORequestChannel: public RequestChannel
 {
-public:
-	enum Side {SERVER_SIDE, CLIENT_SIDE};
-	enum Mode {READ_MODE, WRITE_MODE};
+// public:
+// 	enum Side {SERVER_SIDE, CLIENT_SIDE};
+// 	enum Mode {READ_MODE, WRITE_MODE};
 	
 private:
 	/*  The current implementation uses named pipes. */
