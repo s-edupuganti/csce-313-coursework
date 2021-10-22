@@ -212,7 +212,7 @@ int main(int argc, char *argv[]){
 	if (setIPCMethod == "f") {
 		control_channel = new FIFORequestChannel ("control", FIFORequestChannel::SERVER_SIDE);
 	} else if (setIPCMethod == "q") {
-		control_channel = new MQRequestChannel ("control", MQRequestChannel::SERVER_SIDE);
+		control_channel = new MQRequestChannel ("control", RequestChannel::SERVER_SIDE);
 	} else if (setIPCMethod == "s") {
 		// control_channel = new SHMRequestChannel ("control", SHMRequestChannel::SERVER_SIDE);
 

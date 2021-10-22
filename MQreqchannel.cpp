@@ -10,7 +10,7 @@ using namespace std;
 
 MQRequestChannel::MQRequestChannel(const string _name, const Side _side) : RequestChannel(_name, _side) {
 
-    cout << "GOT TO MQREQUEST CONSTRUCTOR!" << endl;
+    // cout << "GOT TO MQREQUEST CONSTRUCTOR!" << endl;
 
 	mq1 = "/mq_" + my_name + "1";
     // cout << "MY_NAME: " << my_name << endl;
@@ -18,9 +18,9 @@ MQRequestChannel::MQRequestChannel(const string _name, const Side _side) : Reque
 
 
 		
-	if (_side == SERVER_SIDE){
+	if (my_side == SERVER_SIDE){
 		wfd = open_messageQueue(mq1, O_RDWR | O_CREAT);
-        cout << "GOT TO HERE!" << endl;
+        // cout << "GOT TO HERE!" << endl;
 		rfd = open_messageQueue(mq2, O_RDWR | O_CREAT);
 	}
 	else{
@@ -32,7 +32,7 @@ MQRequestChannel::MQRequestChannel(const string _name, const Side _side) : Reque
 }
 
 MQRequestChannel::~MQRequestChannel(){ 
-	
+
 	mq_close(wfd);
 	mq_close(rfd);
 
@@ -43,7 +43,7 @@ MQRequestChannel::~MQRequestChannel(){
 int MQRequestChannel::open_messageQueue(string _mq_name, int mode){
 
 
-    mq_attr members;
+    struct mq_attr members;
 
     members.mq_flags = 0;
     members.mq_maxmsg = 1;
@@ -53,7 +53,7 @@ int MQRequestChannel::open_messageQueue(string _mq_name, int mode){
 
     int mqd = (int) mq_open (_mq_name.c_str(), mode, 0600, &members);
 
-    cout << "GOT TO OPEN_MESSAGE_QUEUE FUNCTION!" << endl;
+    // cout << "GOT TO OPEN_MESSAGE_QUEUE FUNCTION!" << endl;
 
     if (mqd < 0) {
         EXITONERROR(_mq_name);
@@ -64,10 +64,12 @@ int MQRequestChannel::open_messageQueue(string _mq_name, int mode){
 }
 
 int MQRequestChannel::cread(void* msgbuf, int bufcapacity){
+	// cout << "reading from " << my_side << endl;
 	return mq_receive (rfd, (char *)msgbuf, 8192, NULL); 
 }
 
 int MQRequestChannel::cwrite(void* msgbuf, int len){
+	// cout << "writing " << ((char*)msgbuf) << " from " << my_side << endl;
 	// return mq_open (wfd, msgbuf, len);
     return mq_send (wfd, (char*) msgbuf, len, 0);
 }

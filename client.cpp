@@ -79,7 +79,7 @@ int main(int argc, char *argv[]){
 
 	if (process == 0) {
 
-			char *argv[] = {"./server", "-m", (char*)to_string(m).c_str(), NULL};
+			char *argv[] = {"./server", "-m", (char*)to_string(m).c_str(), "-i", (char *) setIPCMethod.c_str(), NULL};
         	execvp(argv[0], argv);		
 
 	} else {
@@ -90,7 +90,7 @@ int main(int argc, char *argv[]){
 			chan = new FIFORequestChannel ("control", RequestChannel::CLIENT_SIDE);
 		} else if (setIPCMethod == "q") {
 			chan = new MQRequestChannel ("control", RequestChannel::CLIENT_SIDE);
-			cout << "USING MQREQCHANNEL!" << endl;
+			// cout << "USING MQREQCHANNEL!" << endl;
 		} else if (setIPCMethod == "s") {
 			// chan = new SHMRequestchannel ("control", RequestChannel::CLIENT_SIDE);
 		}
@@ -226,29 +226,43 @@ int main(int argc, char *argv[]){
 
 			cout << "The channel name is: " << channelName << endl;
 
+			// RequestChannel
 
-			FIFORequestChannel newChan (channelName, FIFORequestChannel::CLIENT_SIDE);
+			RequestChannel* newChan;
+
+			if (setIPCMethod == "f") {
+				newChan = new FIFORequestChannel (channelName, RequestChannel::CLIENT_SIDE);
+			} else if (setIPCMethod == "q") {
+				newChan = new MQRequestChannel (channelName, RequestChannel::CLIENT_SIDE);
+				cout << "USING MQREQUEST" << endl;
+			// cout << "USING MQREQCHANNEL!" << endl;
+			} else if (setIPCMethod == "s") {
+				// newChan = new SHMRequestchannel (channelName, RequestChannel::CLIENT_SIDE);
+			}
+
+
+			// FIFORequestChannel newChan (channelName, FIFORequestChannel::CLIENT_SIDE);
 
 			datamsg dm1 (5, 1, 2); // -0.1
 
 			cout << "Testing data point for patient 5, at time of 1.00 and ecg 2..." << endl;
 
-			newChan.cwrite (&dm1, sizeof (datamsg)); // question
+			newChan->cwrite (&dm1, sizeof (datamsg)); // question
 			double testOutput1;
-			int nbytes1 = newChan.cread (&testOutput1, sizeof(double)); //answer
+			int nbytes1 = newChan->cread (&testOutput1, sizeof(double)); //answer
 			cout << testOutput1 << endl;
 
 			datamsg dm2 (10, 0.36, 1); // -0.245
 
 			cout << "Testing data point for patient 10, at time of 0.36 and ecg 1..." << endl;
 
-			newChan.cwrite (&dm2, sizeof (datamsg)); // question
+			newChan->cwrite (&dm2, sizeof (datamsg)); // question
 			double testOutput2;
-			int nbytes2 = newChan.cread (&testOutput2, sizeof(double)); //answer
+			int nbytes2 = newChan->cread (&testOutput2, sizeof(double)); //answer
 			cout << testOutput2 << endl;
 
 			MESSAGE_TYPE closeNC = QUIT_MSG;
-			newChan.cwrite(&closeNC, sizeof (MESSAGE_TYPE));
+			newChan->cwrite(&closeNC, sizeof (MESSAGE_TYPE));
 			// wait(0);
 
 		}
