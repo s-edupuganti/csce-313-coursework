@@ -64,12 +64,12 @@ int MQRequestChannel::open_messageQueue(string _mq_name, int mode){
 }
 
 int MQRequestChannel::cread(void* msgbuf, int bufcapacity){
-	// cout << "reading from " << my_side << endl;
+	cout << "reading from " << my_side << endl;
 	return mq_receive (rfd, (char *)msgbuf, 8192, NULL); 
 }
 
 int MQRequestChannel::cwrite(void* msgbuf, int len){
-	// cout << "writing " << ((char*)msgbuf) << " from " << my_side << endl;
+	cout << "writing " << ((char*)msgbuf) << " from " << my_side << endl;
 	// return mq_open (wfd, msgbuf, len);
     return mq_send (wfd, (char*) msgbuf, len, 0);
 }

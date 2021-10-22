@@ -16,6 +16,7 @@
 
 #include "FIFOreqchannel.h"
 #include "MQreqchannel.h"
+#include "SHMreqchannel.h"
 
 using namespace std;
 
@@ -49,6 +50,8 @@ void process_newchannel_request (RequestChannel *_channel){
 		data_channel = new FIFORequestChannel (new_channel_name, RequestChannel::SERVER_SIDE);
 	} else if (setIPCMethod == "q") {
 		data_channel = new MQRequestChannel (new_channel_name, RequestChannel::SERVER_SIDE);
+	} else if (setIPCMethod == "s") {
+		data_channel = new SHMRequestChannel (new_channel_name, RequestChannel::SERVER_SIDE, buffercapacity);
 	}
 
 
@@ -214,8 +217,7 @@ int main(int argc, char *argv[]){
 	} else if (setIPCMethod == "q") {
 		control_channel = new MQRequestChannel ("control", RequestChannel::SERVER_SIDE);
 	} else if (setIPCMethod == "s") {
-		// control_channel = new SHMRequestChannel ("control", SHMRequestChannel::SERVER_SIDE);
-
+		control_channel = new SHMRequestChannel ("control", SHMRequestChannel::SERVER_SIDE, buffercapacity);
 	}
 
 	handle_process_loop (control_channel);

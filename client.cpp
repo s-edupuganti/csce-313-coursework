@@ -12,6 +12,8 @@
 #include "common.h"
 #include "FIFOreqchannel.h"
 #include "MQreqchannel.h"
+#include "SHMreqchannel.h"
+
 #include <sys/wait.h>
 #include <chrono>
 
@@ -92,7 +94,8 @@ int main(int argc, char *argv[]){
 			chan = new MQRequestChannel ("control", RequestChannel::CLIENT_SIDE);
 			// cout << "USING MQREQCHANNEL!" << endl;
 		} else if (setIPCMethod == "s") {
-			// chan = new SHMRequestchannel ("control", RequestChannel::CLIENT_SIDE);
+			chan = new SHMRequestChannel ("control", RequestChannel::CLIENT_SIDE, m);
+			cout << "USING SHMRequestChannel!" << endl;
 		}
 
 
@@ -138,10 +141,16 @@ int main(int argc, char *argv[]){
 
 		} else if (patientGiven && timeGiven && ecgGiven && (t >= 0)) {
 
+			cout << "hey lol" << endl;
+
 			// char buf [MAX_MESSAGE]; // 256
 			datamsg x (p, t, e);
 
+		
+
 			chan->cwrite (&x, sizeof (datamsg)); // question
+
+			cout << "hey lol 2" << endl;
 			double reply;
 			chan->cread (&reply, sizeof(double)); //answer
 			cout << "For person " << p <<", at time " << t << ", the value of ecg "<< e <<" is " << reply << endl;

@@ -1,73 +1,101 @@
 #include "common.h"
 #include "SHMreqchannel.h"
-#include <mqueue.h>
+
+#include "semaphore.h"
 
 using namespace std;
+
+
+SHMQueue::SHMQueue(char* _name, int _len): name(_name), len(_len) {
+
+    int fd = shm_open(name, O_RDWR | O_CREAT, 0600);
+
+    ftruncate(fd, len);
+
+    shmbuffer = (char*) mmap(NULL, len, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+  
+    readerdone = sem_open((name + name1).c_str(), O_CREAT, 0600, 1);
+    writerdone = sem_open((name + name2).c_str(), O_CREAT, 0600, 0);
+    
+}
+
+SHMQueue::~SHMQueue() {
+
+    sem_close(writerdone);
+    sem_close(readerdone);
+
+    sem_unlink((name + name1).c_str());
+    sem_unlink((name + name2).c_str());
+
+    munmap(shmbuffer, len);
+
+    shm_unlink(name);
+
+}
+
+int SHMQueue::cwrite(void* msg, int len) {
+
+    sem_wait(readerdone);
+    memcpy(shmbuffer, msg, len);
+    sem_post(writerdone);
+
+}
+
+int SHMQueue::cread(void* msg, int len) {
+
+    sem_wait(writerdone);
+    memcpy(msg, shmbuffer, len);
+    sem_post(readerdone);
+
+    return len;
+
+}
+
 
 /*--------------------------------------------------------------------------*/
 /* CONSTRUCTOR/DESTRUCTOR FOR CLASS   R e q u e s t C h a n n e l  */
 /*--------------------------------------------------------------------------*/
 
-SHMRequestChannel::SHMRequestChannel(const string _name, const Side _side) : RequestChannel(_name, _side) {
+SHMRequestChannel::SHMRequestChannel(const string _name, const Side _side, int _len) : RequestChannel(_name, _side) {
 
-    cout << "GOT TO MQREQUEST CONSTRUCTOR!" << endl;
+	sh1 = "/shm_" + my_name + "1";
+	sh2 = "/shm_" + my_name + "2";
 
-	sh1 = "/mq_" + my_name + "1";
-    // cout << "MY_NAME: " << my_name << endl;
-	sh2 = "/mq_" + my_name + "2";
+    len = _len;
 
+    shm1 = new SHMQueue(const_cast<char*>(sh1.c_str()), len);
+    shm2 = new SHMQueue(const_cast<char*>(sh2.c_str()), len);
 
-		
-	if (_side == SERVER_SIDE){
-		wfd = open_sh(sh1, O_RDWR | O_CREAT);
-        cout << "GOT TO HERE!" << endl;
-		rfd = open_sh(sh2, O_RDWR | O_CREAT);
-	}
-	else{
-		rfd = open_sh(sh1, O_RDWR | O_CREAT);
-		wfd = open_sh(sh2, O_RDWR | O_CREAT);
-		
-	}
-	
+    SHMQueue* tempSHM;
+
+    if (my_side == CLIENT_SIDE) {
+        tempSHM = shm1;
+        shm1 = shm2;
+        shm2 = tempSHM;
+    }
+
 }
 
 SHMRequestChannel::~SHMRequestChannel(){ 
-	mq_close(wfd);
-	mq_close(rfd);
 
-	mq_unlink(sh1.c_str());
-	mq_unlink(sh2.c_str());
-}
-
-int SHMRequestChannel::open_sh(string _mq_name, int mode){
-
-
-    mq_attr members;
-
-    members.mq_flags = 0;
-    members.mq_maxmsg = 1;
-    members.mq_msgsize = 256;
-    members.mq_curmsgs = 0;
-
-
-    int mqd = (int) mq_open (_mq_name.c_str(), mode, 0600, &members);
-
-    cout << "GOT TO OPEN_MESSAGE_QUEUE FUNCTION!" << endl;
-
-    if (mqd < 0) {
-        EXITONERROR(_mq_name);
-    }
-
-    return mqd;
+    delete shm1;
+    delete shm2;
 
 }
+
 
 int SHMRequestChannel::cread(void* msgbuf, int bufcapacity){
-	return mq_receive (rfd, (char *)msgbuf, 8192, NULL); 
+ 
+    // cout << "reading from " << my_side << endl;
+
+    return shm1->cread((char *) msgbuf, bufcapacity);
 }
 
 int SHMRequestChannel::cwrite(void* msgbuf, int len){
-	// return mq_open (wfd, msgbuf, len);
-    return mq_send (wfd, (char*) msgbuf, len, 0);
+
+    // cout << "writing " << ((char*)msgbuf) << " from " << my_side << endl;
+
+    return shm2->cwrite(msgbuf, len);
+
 }
 
