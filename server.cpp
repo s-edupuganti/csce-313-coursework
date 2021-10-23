@@ -49,7 +49,7 @@ void process_newchannel_request (RequestChannel *_channel){
 	if (setIPCMethod == "f") {
 		data_channel = new FIFORequestChannel (new_channel_name, RequestChannel::SERVER_SIDE);
 	} else if (setIPCMethod == "q") {
-		data_channel = new MQRequestChannel (new_channel_name, RequestChannel::SERVER_SIDE);
+		data_channel = new MQRequestChannel (new_channel_name, RequestChannel::SERVER_SIDE, buffercapacity);
 	} else if (setIPCMethod == "s") {
 		data_channel = new SHMRequestChannel (new_channel_name, RequestChannel::SERVER_SIDE, buffercapacity);
 	}
@@ -199,7 +199,15 @@ int main(int argc, char *argv[]){
 				break;
 			case 'i':
 				setIPCMethod = optarg;
-				cout << "IPC METHOD SWITCHED TO: " << setIPCMethod << endl;
+
+				if (setIPCMethod == "f") {
+					cout << "IPC METHOD SWITCHED TO: FIFO" << endl;
+				} else if (setIPCMethod == "q") {
+					cout << "IPC METHOD SWITCHED TO: MESSAGE QUEUE" << endl;
+				} else if (setIPCMethod == "s") {
+					cout << "IPC METHOD SWITCHED TO: SHARED MESSAGE QUEUE" << endl;
+				}
+
 				break;
 		}
 	}
@@ -215,7 +223,7 @@ int main(int argc, char *argv[]){
 	if (setIPCMethod == "f") {
 		control_channel = new FIFORequestChannel ("control", FIFORequestChannel::SERVER_SIDE);
 	} else if (setIPCMethod == "q") {
-		control_channel = new MQRequestChannel ("control", RequestChannel::SERVER_SIDE);
+		control_channel = new MQRequestChannel ("control", RequestChannel::SERVER_SIDE, buffercapacity);
 	} else if (setIPCMethod == "s") {
 		control_channel = new SHMRequestChannel ("control", SHMRequestChannel::SERVER_SIDE, buffercapacity);
 	}

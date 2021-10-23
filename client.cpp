@@ -30,6 +30,7 @@ int main(int argc, char *argv[]){
 	int p = 1;
 	int e = 1;
 	int d = 1;
+	int c = 1;
 	int m = MAX_MESSAGE;
 
 	bool isFile = false;
@@ -70,6 +71,7 @@ int main(int argc, char *argv[]){
 				break;
 			case 'c':
 				makeNewChan = true;
+				c += atoi (optarg);
 				break;
 			case 'i':
 				setIPCMethod = optarg;
@@ -90,71 +92,106 @@ int main(int argc, char *argv[]){
 
 		if (setIPCMethod == "f") {
 			chan = new FIFORequestChannel ("control", RequestChannel::CLIENT_SIDE);
+			// cout << "USING FIFOREQCHANNEL!" << endl;
 		} else if (setIPCMethod == "q") {
-			chan = new MQRequestChannel ("control", RequestChannel::CLIENT_SIDE);
+			chan = new MQRequestChannel ("control", RequestChannel::CLIENT_SIDE, m);
 			// cout << "USING MQREQCHANNEL!" << endl;
 		} else if (setIPCMethod == "s") {
 			chan = new SHMRequestChannel ("control", RequestChannel::CLIENT_SIDE, m);
-			cout << "USING SHMRequestChannel!" << endl;
+			// cout << "USING SHMREQCHANNEL!" << endl;
 		}
 
 
-		// FIFORequestChannel chan ("control", FIFORequestChannel::CLIENT_SIDE);
+		vector<RequestChannel*> channels;
+		channels.reserve(c);
+		channels.push_back(chan);
+
+		for (int i = 1; i < c; i++) {
+
+			RequestChannel* newChan;
+
+			if (makeNewChan) {
+
+				MESSAGE_TYPE nc = NEWCHANNEL_MSG;
+				chan->cwrite(&nc, sizeof(MESSAGE_TYPE));
+				char ncChar[m];
+				chan->cread(&ncChar, sizeof(ncChar));
+
+				string channelName = ncChar;
+
+				cout << "The channel name is: " << channelName << endl;
+
+				// RequestChannel
 
 
-
-		if (t < 0) {
-
-
-			std::ofstream myFile;
-
-			myFile.open ("x1.csv");
-
-			// cout << "Requesting 1000 datapoints...";
-
-			startTime = Clock::now();
-
-
-			for (double i = 0; i < 4; i = i + 0.004) {
-
-				char buf [MAX_MESSAGE];
-				datamsg x (p, i, 1);
-				chan->cwrite (&x, sizeof (datamsg)); // question
-				double reply;
-				int nbytes = chan->cread (&reply, sizeof(double)); //answer
-
-				datamsg y (p, i, 2);
-				chan->cwrite (&y, sizeof (datamsg)); // question
-				double replyTwo;
-				int nbytesTwo = chan->cread (&replyTwo, sizeof(double)); //answer
-
-
-				myFile << i << "," << reply << "," << replyTwo << "\n"; 
+				if (setIPCMethod == "f") {
+					newChan = new FIFORequestChannel (channelName, RequestChannel::CLIENT_SIDE);
+				} else if (setIPCMethod == "q") {
+					newChan = new MQRequestChannel (channelName, RequestChannel::CLIENT_SIDE, m);
+					cout << "USING MQREQUEST" << endl;
+				} else if (setIPCMethod == "s") {
+					newChan = new SHMRequestChannel ("control", RequestChannel::CLIENT_SIDE, m);
+				}
 
 			}
 
-			endTime = Clock::now();
+			channels.push_back(newChan);
 
-			cout << "Amount of time to request 1000 datapoints: " << chrono::duration_cast<chrono::nanoseconds>(endTime - startTime).count() << " nanoseconds" << endl;
-
-			myFile.close();
-
-		} else if (patientGiven && timeGiven && ecgGiven && (t >= 0)) {
-
-			cout << "hey lol" << endl;
-
-			// char buf [MAX_MESSAGE]; // 256
-			datamsg x (p, t, e);
-
-		
-
-			chan->cwrite (&x, sizeof (datamsg)); // question
-
-			cout << "hey lol 2" << endl;
-			double reply;
-			chan->cread (&reply, sizeof(double)); //answer
-			cout << "For person " << p <<", at time " << t << ", the value of ecg "<< e <<" is " << reply << endl;
 		}
+
+		for (int i = 0; i < channels.size(); i++) {
+
+
+			if (t < 0 || !(timeGiven)) {
+
+				std::ofstream myFile;
+
+				myFile.open ("received/x1.csv");
+
+				cout << "Requesting 1000 datapoints...";
+
+				startTime = Clock::now();
+
+
+				for (double j = 0; j < 4; j+=0.004) {
+
+					char buf [m];
+					datamsg x (p, j, 1);
+					channels[i]->cwrite (&x, sizeof (datamsg)); // question
+					double reply;
+					int nbytes = channels[i]->cread (&reply, sizeof(double)); //answer
+
+					datamsg y (p, j, 2);
+					channels[i]->cwrite (&y, sizeof (datamsg)); // question
+					double replyTwo;
+					int nbytesTwo = channels[i]->cread (&replyTwo, sizeof(double)); //answer
+
+
+					myFile << j << "," << reply << "," << replyTwo << "\n"; 
+
+				}
+
+				endTime = Clock::now();
+
+				cout << "Amount of time to request 1000 datapoints for Channel " << i << ": " << chrono::duration_cast<chrono::nanoseconds>(endTime - startTime).count() << " nanoseconds" << endl;
+
+				myFile.close();
+
+			} else if (patientGiven && timeGiven && ecgGiven && (t >= 0)) {
+
+				// char buf [MAX_MESSAGE]; // 256
+				datamsg x (p, t, e);
+
+				channels[i]->cwrite (&x, sizeof (datamsg)); // question
+
+				double reply;
+				channels[i]->cread (&reply, sizeof(double)); //answer
+				cout << "For person " << p <<", at time " << t << ", the value of ecg "<< e <<" is " << reply << endl;
+			}
+
+		}
+
+
 
 		if (isFile) {
 			
@@ -217,62 +254,7 @@ int main(int argc, char *argv[]){
 
 			cout << "Amount of time to request file: " << chrono::duration_cast<chrono::nanoseconds>(endTime - startTime).count() << " nanoseconds" << endl;
 
-
 			requestFile.close();
-
-
-
-		}
-
-		if (makeNewChan) {
-
-			MESSAGE_TYPE nc = NEWCHANNEL_MSG;
-			chan->cwrite(&nc, sizeof(MESSAGE_TYPE));
-			char ncChar[m];
-			chan->cread(&ncChar, sizeof(ncChar));
-
-			string channelName = ncChar;
-
-			cout << "The channel name is: " << channelName << endl;
-
-			// RequestChannel
-
-			RequestChannel* newChan;
-
-			if (setIPCMethod == "f") {
-				newChan = new FIFORequestChannel (channelName, RequestChannel::CLIENT_SIDE);
-			} else if (setIPCMethod == "q") {
-				newChan = new MQRequestChannel (channelName, RequestChannel::CLIENT_SIDE);
-				cout << "USING MQREQUEST" << endl;
-			// cout << "USING MQREQCHANNEL!" << endl;
-			} else if (setIPCMethod == "s") {
-				// newChan = new SHMRequestchannel (channelName, RequestChannel::CLIENT_SIDE);
-			}
-
-
-			// FIFORequestChannel newChan (channelName, FIFORequestChannel::CLIENT_SIDE);
-
-			datamsg dm1 (5, 1, 2); // -0.1
-
-			cout << "Testing data point for patient 5, at time of 1.00 and ecg 2..." << endl;
-
-			newChan->cwrite (&dm1, sizeof (datamsg)); // question
-			double testOutput1;
-			int nbytes1 = newChan->cread (&testOutput1, sizeof(double)); //answer
-			cout << testOutput1 << endl;
-
-			datamsg dm2 (10, 0.36, 1); // -0.245
-
-			cout << "Testing data point for patient 10, at time of 0.36 and ecg 1..." << endl;
-
-			newChan->cwrite (&dm2, sizeof (datamsg)); // question
-			double testOutput2;
-			int nbytes2 = newChan->cread (&testOutput2, sizeof(double)); //answer
-			cout << testOutput2 << endl;
-
-			MESSAGE_TYPE closeNC = QUIT_MSG;
-			newChan->cwrite(&closeNC, sizeof (MESSAGE_TYPE));
-			// wait(0);
 
 		}
 

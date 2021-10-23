@@ -10,10 +10,19 @@ SHMQueue::SHMQueue(char* _name, int _len): name(_name), len(_len) {
 
     int fd = shm_open(name, O_RDWR | O_CREAT, 0600);
 
+    if (fd < 0) {
+        EXITONERROR("No memory segment!");
+    }
+
     ftruncate(fd, len);
 
     shmbuffer = (char*) mmap(NULL, len, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-  
+
+    if (!shmbuffer) {
+        EXITONERROR("No access to memory segment!");
+    }
+
+    
     readerdone = sem_open((name + name1).c_str(), O_CREAT, 0600, 1);
     writerdone = sem_open((name + name2).c_str(), O_CREAT, 0600, 0);
     
@@ -52,19 +61,20 @@ int SHMQueue::cread(void* msg, int len) {
 }
 
 
+
 /*--------------------------------------------------------------------------*/
 /* CONSTRUCTOR/DESTRUCTOR FOR CLASS   R e q u e s t C h a n n e l  */
 /*--------------------------------------------------------------------------*/
 
-SHMRequestChannel::SHMRequestChannel(const string _name, const Side _side, int _len) : RequestChannel(_name, _side) {
+SHMRequestChannel::SHMRequestChannel(const string _name, const Side _side, int _bufcap) : RequestChannel(_name, _side) {
 
 	sh1 = "/shm_" + my_name + "1";
 	sh2 = "/shm_" + my_name + "2";
 
-    len = _len;
+    bufcap = _bufcap;
 
-    shm1 = new SHMQueue(const_cast<char*>(sh1.c_str()), len);
-    shm2 = new SHMQueue(const_cast<char*>(sh2.c_str()), len);
+    shm1 = new SHMQueue(const_cast<char*>(sh1.c_str()), bufcap);
+    shm2 = new SHMQueue(const_cast<char*>(sh2.c_str()), bufcap);
 
     SHMQueue* tempSHM;
 

@@ -21,4 +21,4 @@ server: server.cpp  FIFOreqchannel.o MQreqchannel.o SHMreqchannel.o common.o
 	g++ -g -w -std=c++11 -o server server.cpp FIFOreqchannel.o MQreqchannel.o SHMreqchannel.o common.o -lpthread -lrt
 
 clean:
-	rm -rf *.o *.csv fifo* server client data*_*
+	rm -rf *.o *.csv received/*.csv fifo* server client data*_*
