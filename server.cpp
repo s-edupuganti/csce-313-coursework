@@ -230,4 +230,6 @@ int main(int argc, char *argv[]){
 
 	handle_process_loop (control_channel);
 	cout << "Server terminated" << endl;
+
+	delete control_channel;
 }

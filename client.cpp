@@ -119,7 +119,7 @@ int main(int argc, char *argv[]){
 
 				string channelName = ncChar;
 
-				cout << "The channel name is: " << channelName << endl;
+				cout << "Created channel: " << channelName << endl;
 
 				// RequestChannel
 
@@ -128,7 +128,7 @@ int main(int argc, char *argv[]){
 					newChan = new FIFORequestChannel (channelName, RequestChannel::CLIENT_SIDE);
 				} else if (setIPCMethod == "q") {
 					newChan = new MQRequestChannel (channelName, RequestChannel::CLIENT_SIDE, m);
-					cout << "USING MQREQUEST" << endl;
+					// cout << "USING MQREQUEST" << endl;
 				} else if (setIPCMethod == "s") {
 					newChan = new SHMRequestChannel ("control", RequestChannel::CLIENT_SIDE, m);
 				}
@@ -139,10 +139,12 @@ int main(int argc, char *argv[]){
 
 		}
 
+
+		cout << "Channel vector size is: " << channels.size() << endl;
+		
 		for (int i = 0; i < channels.size(); i++) {
 
-
-			if (t < 0 || !(timeGiven)) {
+			if (t < 0 || (!(timeGiven) && patientGiven && ecgGiven)) {
 
 				std::ofstream myFile;
 
@@ -151,7 +153,6 @@ int main(int argc, char *argv[]){
 				cout << "Requesting 1000 datapoints...";
 
 				startTime = Clock::now();
-
 
 				for (double j = 0; j < 4; j+=0.004) {
 
@@ -189,12 +190,13 @@ int main(int argc, char *argv[]){
 				cout << "For person " << p <<", at time " << t << ", the value of ecg "<< e <<" is " << reply << endl;
 			}
 
+			
 		}
 
 
 
 		if (isFile) {
-			
+		
 			filemsg fm (0,0);
 			string fname = filename;
 			
@@ -208,10 +210,10 @@ int main(int argc, char *argv[]){
 			chan->cread(&fileLength, sizeof(__int64_t));
 			cout << "File length is: " << fileLength << endl;
 
+			__int64_t scBytes = ceil(fileLength / (1.0 * c));
 
+			cout << "Each channel should get: " << scBytes << endl;
 
-			int requests = ceil(fileLength / (1.0 * m));
-			cout << "Number of requests is: " << requests << endl;
 
 			filemsg msg(0, 0);
 
@@ -222,50 +224,75 @@ int main(int argc, char *argv[]){
 
 			requestFile.open(("received/" + filename));
 
-			startTime = Clock::now();
 
 
-			for (int i = 0; i < requests; i++) {
+			for (int i = 0; i < channels.size(); i++) {
 
-					// cout << "(" << offset << "," << length << ")" << endl;
+				startTime = Clock::now();
+
+
+				if (i == (channels.size() - 1)) {
+					__int64_t tempSCBytes = scBytes;
+					scBytes = fileLength - (tempSCBytes * (channels.size() - 1));
+					// cout << "FINAL SCBYTES: " << scBytes << endl; 
+					
+				}
+
+				int requests = ceil(scBytes / (1.0 * m));
+				cout << "Number of requests is: " << requests << endl;
+
+				for (int j = 0; j < requests; j++) {
 
 					msg.offset = offset;
 					msg.length = length;
+
 
 					int len = sizeof (filemsg) + fname.size()+1;
 					char buf2 [len];
 					memcpy (buf2, &msg, sizeof (filemsg));
 					strcpy (buf2 + sizeof (filemsg), fname.c_str());
-					chan->cwrite (buf2, len);  // I want the file length;
+					channels[i]->cwrite (buf2, len);  // I want the file length;
 
 					char x[length];
 
-					requestFile.write(x, chan->cread(&x, length));
+					requestFile.write(x, channels[i]->cread(&x, length));
 
 					offset += length;
 
 					if (offset + length > fileLength) {
+
 						length = fileLength - offset;
+
 					}
-			
+				}
+
+				endTime = Clock::now();
+				cout << "Amount of time to request file for Channel " << i << ": " << chrono::duration_cast<chrono::nanoseconds>(endTime - startTime).count() << " nanoseconds" << endl;
+
 			}
 
-			endTime = Clock::now();
-
-			cout << "Amount of time to request file: " << chrono::duration_cast<chrono::nanoseconds>(endTime - startTime).count() << " nanoseconds" << endl;
+			cout << "File Transfer Done!" << endl;
 
 			requestFile.close();
 
 		}
 
-		
-		// closing the channel    
+		// cout << "Channel vector size POST TRANSFER is: " << channels.size() << endl;
+
+		// closing the channel besides control    
 		MESSAGE_TYPE q = QUIT_MSG;
-		chan->cwrite (&q, sizeof (MESSAGE_TYPE));
+
+		for (int i = 1; i < channels.size(); i++) {
+			channels[i]->cwrite (&q, sizeof (MESSAGE_TYPE));
+			delete channels[i];
+		}
+
+		chan->cwrite (&q, sizeof (MESSAGE_TYPE)); // closing control
+		delete chan;
 		
 		wait(0);
-	
-	}
 
 	// return 0;
+	}
+
 }

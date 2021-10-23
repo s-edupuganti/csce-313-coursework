@@ -15,8 +15,8 @@ private:
 	/*  The current implementation uses named pipes. */
 	
 	
-	string my_name;
-	Side my_side;
+	// string my_name;
+	// Side my_side;
 	
 	int wfd;
 	int rfd;

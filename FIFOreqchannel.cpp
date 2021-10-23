@@ -11,7 +11,7 @@ FIFORequestChannel::FIFORequestChannel(const string _name, const Side _side) : R
 	// cout << "MY_NAME: " << my_name << endl;
 	pipe2 = "fifo_" + my_name + "2";
 		
-	if (_side == SERVER_SIDE){
+	if (my_side == SERVER_SIDE){
 		wfd = open_pipe(pipe1, O_WRONLY);
 		rfd = open_pipe(pipe2, O_RDONLY);
 	}
