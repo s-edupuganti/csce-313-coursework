@@ -5,7 +5,6 @@
 
 using namespace std;
 
-
 SHMQueue::SHMQueue(char* _name, int _len): name(_name), len(_len) {
 
     int fd = shm_open(name, O_RDWR | O_CREAT, 0600);
@@ -71,16 +70,13 @@ SHMRequestChannel::SHMRequestChannel(const string _name, const Side _side, int _
 
     bufcap = _bufcap;
 
-    shm1 = new SHMQueue(const_cast<char*>(sh1.c_str()), bufcap);
-    shm2 = new SHMQueue(const_cast<char*>(sh2.c_str()), bufcap);
-
-    SHMQueue* tempSHM;
-
-    if (my_side == CLIENT_SIDE) {
-        tempSHM = shm1;
-        shm1 = shm2;
-        shm2 = tempSHM;
-    }
+	if (my_side == SERVER_SIDE){
+        shm1 = new SHMQueue(const_cast<char*>(sh1.c_str()), bufcap);
+        shm2 = new SHMQueue(const_cast<char*>(sh2.c_str()), bufcap);
+	} else{
+        shm1 = new SHMQueue(const_cast<char*>(sh2.c_str()), bufcap);
+        shm2 = new SHMQueue(const_cast<char*>(sh1.c_str()), bufcap);       
+	}
 
 }
 
@@ -91,17 +87,12 @@ SHMRequestChannel::~SHMRequestChannel(){
 
 }
 
-
 int SHMRequestChannel::cread(void* msgbuf, int bufcapacity){
  
-    // cout << "reading from " << my_side << endl;
-
     return shm1->cread((char *) msgbuf, bufcapacity);
 }
 
 int SHMRequestChannel::cwrite(void* msgbuf, int len){
-
-    // cout << "writing " << ((char*)msgbuf) << " from " << my_side << endl;
 
     return shm2->cwrite(msgbuf, len);
 

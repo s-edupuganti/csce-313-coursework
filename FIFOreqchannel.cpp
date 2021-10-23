@@ -1,5 +1,6 @@
 #include "common.h"
 #include "FIFOreqchannel.h"
+
 using namespace std;
 
 /*--------------------------------------------------------------------------*/
@@ -7,8 +8,8 @@ using namespace std;
 /*--------------------------------------------------------------------------*/
 
 FIFORequestChannel::FIFORequestChannel(const string _name, const Side _side) : RequestChannel(_name, _side) {
+
 	pipe1 = "fifo_" + my_name + "1";
-	// cout << "MY_NAME: " << my_name << endl;
 	pipe2 = "fifo_" + my_name + "2";
 		
 	if (my_side == SERVER_SIDE){
@@ -24,6 +25,7 @@ FIFORequestChannel::FIFORequestChannel(const string _name, const Side _side) : R
 }
 
 FIFORequestChannel::~FIFORequestChannel(){ 
+
 	close(wfd);
 	close(rfd);
 
@@ -32,19 +34,27 @@ FIFORequestChannel::~FIFORequestChannel(){
 }
 
 int FIFORequestChannel::open_pipe(string _pipe_name, int mode){
+
 	mkfifo (_pipe_name.c_str (), 0600);
+
 	int fd = open(_pipe_name.c_str(), mode);
+
 	if (fd < 0){
 		EXITONERROR(_pipe_name);
 	}
+
 	return fd;
 }
 
 int FIFORequestChannel::cread(void* msgbuf, int bufcapacity){
+
 	return read (rfd, msgbuf, bufcapacity); 
+
 }
 
 int FIFORequestChannel::cwrite(void* msgbuf, int len){
+
 	return write (wfd, msgbuf, len);
+	
 }
 

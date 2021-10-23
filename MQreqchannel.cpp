@@ -17,7 +17,6 @@ MQRequestChannel::MQRequestChannel(const string _name, const Side _side, int _bu
 		
 	if (my_side == SERVER_SIDE){
 		wfd = open_messageQueue(mq1, O_RDWR | O_CREAT);
-        // cout << "GOT TO HERE!" << endl;
 		rfd = open_messageQueue(mq2, O_RDWR | O_CREAT);
 	}
 	else{
@@ -41,10 +40,8 @@ int MQRequestChannel::open_messageQueue(string _mq_name, int mode){
 
     struct mq_attr members;
 
-    // members.mq_flags = 0;
     members.mq_maxmsg = 1;
     members.mq_msgsize = bufcap;
-    // members.mq_curmsgs = 0;
 
     int mqd = (int) mq_open (_mq_name.c_str(), mode, 0600, &members);
 
@@ -57,14 +54,14 @@ int MQRequestChannel::open_messageQueue(string _mq_name, int mode){
 }
 
 int MQRequestChannel::cread(void* msgbuf, int bufcapacity){
-	// cout << "reading from " << my_side << endl;
+
 	return mq_receive (rfd, (char *)msgbuf, 8192, NULL); 
 	
 }
 
 int MQRequestChannel::cwrite(void* msgbuf, int len){
 
-	// cout << "writing " << ((char*)msgbuf) << " from " << my_side << endl;
     return mq_send (wfd, (char*) msgbuf, len, 0);
+	
 }
 

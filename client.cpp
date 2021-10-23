@@ -103,6 +103,7 @@ int main(int argc, char *argv[]){
 
 
 		vector<RequestChannel*> channels;
+
 		channels.reserve(c);
 		channels.push_back(chan);
 
@@ -119,8 +120,6 @@ int main(int argc, char *argv[]){
 
 				string channelName = ncChar;
 
-				cout << "Created channel: " << channelName << endl;
-
 				// RequestChannel
 
 
@@ -128,9 +127,8 @@ int main(int argc, char *argv[]){
 					newChan = new FIFORequestChannel (channelName, RequestChannel::CLIENT_SIDE);
 				} else if (setIPCMethod == "q") {
 					newChan = new MQRequestChannel (channelName, RequestChannel::CLIENT_SIDE, m);
-					// cout << "USING MQREQUEST" << endl;
 				} else if (setIPCMethod == "s") {
-					newChan = new SHMRequestChannel ("control", RequestChannel::CLIENT_SIDE, m);
+					newChan = new SHMRequestChannel (channelName, RequestChannel::CLIENT_SIDE, m);
 				}
 
 			}
@@ -139,18 +137,18 @@ int main(int argc, char *argv[]){
 
 		}
 
-
-		cout << "Channel vector size is: " << channels.size() << endl;
+		// cout << "Channel vector size is: " << channels.size() << endl;
 		
 		for (int i = 0; i < channels.size(); i++) {
 
 			if (t < 0 || (!(timeGiven) && patientGiven && ecgGiven)) {
 
+				cout << "Requesting 1000 datapoints..." << endl;
+
 				std::ofstream myFile;
 
 				myFile.open ("received/x1.csv");
 
-				cout << "Requesting 1000 datapoints...";
 
 				startTime = Clock::now();
 
@@ -180,7 +178,6 @@ int main(int argc, char *argv[]){
 
 			} else if (patientGiven && timeGiven && ecgGiven && (t >= 0)) {
 
-				// char buf [MAX_MESSAGE]; // 256
 				datamsg x (p, t, e);
 
 				channels[i]->cwrite (&x, sizeof (datamsg)); // question
@@ -192,8 +189,6 @@ int main(int argc, char *argv[]){
 
 			
 		}
-
-
 
 		if (isFile) {
 		
@@ -208,11 +203,11 @@ int main(int argc, char *argv[]){
 
 			__int64_t fileLength;
 			chan->cread(&fileLength, sizeof(__int64_t));
-			cout << "File length is: " << fileLength << endl;
+			// cout << "File length is: " << fileLength << endl;
 
 			__int64_t scBytes = ceil(fileLength / (1.0 * c));
 
-			cout << "Each channel should get: " << scBytes << endl;
+			// cout << "Each channel should get: " << scBytes << endl;
 
 
 			filemsg msg(0, 0);
@@ -239,7 +234,7 @@ int main(int argc, char *argv[]){
 				}
 
 				int requests = ceil(scBytes / (1.0 * m));
-				cout << "Number of requests is: " << requests << endl;
+				// cout << "Number of requests is: " << requests << endl;
 
 				for (int j = 0; j < requests; j++) {
 
@@ -276,8 +271,6 @@ int main(int argc, char *argv[]){
 			requestFile.close();
 
 		}
-
-		// cout << "Channel vector size POST TRANSFER is: " << channels.size() << endl;
 
 		// closing the channel besides control    
 		MESSAGE_TYPE q = QUIT_MSG;
