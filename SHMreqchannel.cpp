@@ -47,6 +47,8 @@ int SHMQueue::cwrite(void* msg, int len) {
     memcpy(shmbuffer, msg, len);
     sem_post(writerdone);
 
+    return len;
+
 }
 
 int SHMQueue::cread(void* msg, int len) {
