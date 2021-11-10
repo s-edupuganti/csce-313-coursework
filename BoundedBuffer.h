@@ -4,7 +4,9 @@
 #include <stdio.h>
 #include <queue>
 #include <string>
-#include <pthread.h>
+#include <thread>
+#include <condition_variable>
+#include <mutex>
 
 using namespace std;
 
@@ -20,9 +22,16 @@ private:
 
 	// add necessary synchronization variables and data structures 
 
+	mutex m;
+
+	condition_variable overflow;
+	condition_variable underflow;
+
 
 public:
 	BoundedBuffer(int _cap){
+
+		cap = _cap;
 
 	}
 	~BoundedBuffer(){
@@ -31,6 +40,7 @@ public:
 
 	void push(char* data, int len){
 		//1. Wait until there is room in the queue (i.e., queue lengh is less than cap)
+		
 		//2. Convert the incoming byte sequence given by data and len into a vector<char>
 		//3. Then push the vector at the end of the queue
 	}
