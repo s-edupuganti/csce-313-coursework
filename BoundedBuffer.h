@@ -40,9 +40,13 @@ public:
 
 	void push(char* data, int len){
 		//1. Wait until there is room in the queue (i.e., queue lengh is less than cap)
+		underflow.wait(unique_lock<mutex> m, [this]{return q.size() < cap;});
+
 		
 		//2. Convert the incoming byte sequence given by data and len into a vector<char>
+		vector<char> incByteSeq (data, data + len);
 		//3. Then push the vector at the end of the queue
+		q.push(incByteSeq);
 	}
 
 	int pop(char* buf, int bufcap){
