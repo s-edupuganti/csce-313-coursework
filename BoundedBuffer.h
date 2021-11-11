@@ -22,10 +22,10 @@ private:
 
 	// add necessary synchronization variables and data structures 
 
-	mutex m;
+	mutex mut;
 
-	condition_variable overflow;
-	condition_variable underflow;
+	condition_variable cv1;
+	condition_variable cv2;
 
 
 public:
@@ -40,20 +40,40 @@ public:
 
 	void push(char* data, int len){
 		//1. Wait until there is room in the queue (i.e., queue lengh is less than cap)
-		underflow.wait(unique_lock<mutex> m, [this]{return q.size() < cap;});
 
+		unique_lock<mutex> lock(mut);
 		
+		while (q.size() == cap) {
+			cv1.wait(lock);
+		}
+
 		//2. Convert the incoming byte sequence given by data and len into a vector<char>
 		vector<char> incByteSeq (data, data + len);
 		//3. Then push the vector at the end of the queue
 		q.push(incByteSeq);
+
+		lock.unlock();
+
+		cv2.notify_one();
 	}
 
 	int pop(char* buf, int bufcap){
 		//1. Wait until the queue has at least 1 item
+		unique_lock<mutex> lock(mut);
+
+		while (q.size() <= 0) {
+			cv2.wait(lock);
+		}
 		//2. pop the front item of the queue. The popped item is a vector<char>
+		vector<char> poppedItem = q.front();
 		//3. Convert the popped vector<char> into a char*, copy that into buf, make sure that vector<char>'s length is <= bufcap
+		if (poppedItem.size() > bufcap) {
+			// cout << "ERROR: Vector length is greater than bufcap" << endl;
+			throw invalid_argument("ERROR: Vector length is greater than bufcap!");
+		}
+		buf = poppedItem.data();
 		//4. Return the vector's length to the caller so that he knows many bytes were popped
+		return (poppedItem.size());
 	}
 };
 
