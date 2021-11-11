@@ -8,8 +8,23 @@
 using namespace std;
 
 
-void patient_thread_function(/*add necessary arguments*/){
+void patient_thread_function(BoundedBuffer reqBuf, int patientNum, int ecgDataPoints){
     /* What will the patient threads do? */
+
+    // datamsg args = (which patient?, which seconds?, which ecg - 1 or 2?)
+
+    double diff = 0.004;
+
+    datamsg dm (patientNum, 0.00, 1);
+
+    for (double i = 0; i < (ecgDataPoints*diff); i += diff) {
+
+        reqBuf.push((char*) &dm, sizeof (datamsg));
+
+        dm.seconds += diff;
+
+    }
+
 }
 
 void worker_thread_function(/*add necessary arguments*/){
