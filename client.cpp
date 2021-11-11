@@ -4,6 +4,7 @@
 #include "common.h"
 #include "HistogramCollection.h"
 #include "FIFOreqchannel.h"
+#include <sys/wait.h>
 
 using namespace std;
 
@@ -27,10 +28,48 @@ void patient_thread_function(BoundedBuffer reqBuf, int patientNum, int ecgDataPo
 
 }
 
-void worker_thread_function(/*add necessary arguments*/){
+void worker_thread_function(BoundedBuffer reqBuf, BoundedBuffer respBuf, FIFORequestChannel chan, int bufCap){
     /*
 		Functionality of the worker threads	
     */
+
+
+
+   while (true) {
+
+       char buf [bufCap];
+
+       char request = reqBuf.pop(buf, bufCap);
+
+       
+
+       // reuqest = reqBuf.pop()
+
+       MESSAGE_TYPE msg = (MESSAGE_TYPE) request;
+       
+       // = MESSAGE_TYPE(request);
+
+
+       // if msg = data
+
+       if (msg == DATA_MSG) {
+
+           datamsg* dm = (datamsg*) request;
+
+           chan.cwrite(request, sizeof(request));
+
+
+
+
+
+
+
+       }
+
+       // if msg = file
+
+       // if msg = quit
+   }
 }
 void histogram_thread_function (/*add necessary arguments*/){
     /*
@@ -42,18 +81,47 @@ void histogram_thread_function (/*add necessary arguments*/){
 
 int main(int argc, char *argv[])
 {
+    int opt;
     int n = 100;    		//default number of requests per "patient"
     int p = 10;     		// number of patients [1,15]
     int w = 100;    		//default number of worker threads
     int b = 20; 		// default capacity of the request buffer, you should change this default
 	int m = MAX_MESSAGE; 	// default capacity of the message buffer
+
+    string filename = "";
+
     srand(time_t(NULL));
-    
+
+    while ((opt = getopt(argc, argv, "n:p:w:b:m:")) != -1) {
+
+        switch(opt) {
+            case 'n':
+                n = atoi(optarg);
+                break;
+            case 'p':
+                p = atoi(optarg);
+                break;
+            case 'w':
+                w = atoi(optarg);
+                break;
+            case 'b':
+                b = atoi(optarg);
+                break;
+            case 'm':
+                m = atoi(optarg);
+                break;
+        }
+    }
+
+
     
     int pid = fork();
     if (pid == 0){
 		// modify this to pass along m
-        execl ("server", "server", (char *)NULL);
+        // execl ("server", "-m", (char*)to_string(m).c_str(), (char *)NULL);
+
+        char *argv[] = {"./server", "-m", (char*)to_string(m).c_str(), NULL};
+        execvp(argv[0], argv);
     }
     
 	FIFORequestChannel* chan = new FIFORequestChannel("control", FIFORequestChannel::CLIENT_SIDE);
