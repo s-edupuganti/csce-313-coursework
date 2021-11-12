@@ -23,10 +23,6 @@ public:
     vector<Histogram*> get_hist_vect() {
         return hists;
     }
-
-    void upd (double val, int p) {
-        hists[p - 1]->update(val);
-    }
     
     void print (){
         int nhists = hists.size();

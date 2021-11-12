@@ -170,7 +170,7 @@ public:
 
 		lock.unlock();
 
-		data_cv.notify_all();
+		data_cv.notify_one();
 	}
 
 	int pop(char* buf, int bufcap){
@@ -206,7 +206,7 @@ public:
 		//4. Return the vector's length to the caller so that he knows many bytes were popped
 		lock.unlock();
 
-		slot_cv.notify_all();
+		slot_cv.notify_one();
 		return (poppedItem.size());
 	}
 };

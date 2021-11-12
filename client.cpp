@@ -17,7 +17,6 @@ class Reply {
 
 };
 
-
 void patient_thread_function(BoundedBuffer* reqBuf, int patient, int num){
     /* What will the patient threads do? */
 
@@ -38,15 +37,72 @@ void patient_thread_function(BoundedBuffer* reqBuf, int patient, int num){
     }
 }
 
-void worker_thread_function(/*add necessary arguments*/){
-    /*
-		Functionality of the worker threads	
-    */
+void worker_thread_function(BoundedBuffer* reqBuf, BoundedBuffer* respBuf, FIFORequestChannel* newWChan, int bufferCap){
+    
+
+    while (true) {
+
+        char request [1024];
+
+        reqBuf->pop(request, 1024);
+
+        MESSAGE_TYPE* msg = (MESSAGE_TYPE*) request;
+
+        if (*msg == DATA_MSG) {
+
+            datamsg* dm = (datamsg*) request;
+
+            newWChan->cwrite(request, sizeof(datamsg));
+
+            double ecgNum;
+
+            newWChan->cread(&ecgNum, sizeof(double));
+
+            // cout << "Ecgnum: " << ecgNum << endl;
+
+            Reply resp;
+
+            resp.p = dm->person;
+            resp.ecg = ecgNum;
+
+            respBuf->push ((char*) &resp, sizeof (resp));
+
+        } else if (*msg == QUIT_MSG) {
+
+            newWChan->cwrite(msg, sizeof(MESSAGE_TYPE));
+            delete newWChan;
+            break;
+        }
+    }
+
+
 }
-void histogram_thread_function (/*add necessary arguments*/){
+void histogram_thread_function (BoundedBuffer* respBuf, HistogramCollection* histColl){
     /*
 		Functionality of the histogram threads	
     */
+
+   while (true) {
+
+       char response[1024];
+
+       respBuf->pop(response, 1024);
+
+       Reply* resp = (Reply*) response;
+
+       if (resp->p < 0) {
+           break;
+       } else {
+
+           ((histColl->get_hist_vect())[(resp->p) - 1])->update(resp->ecg);
+
+        // cout << "Patient: " << resp->p << "|| Ecg: " << resp->ecg << endl; 
+
+
+           
+       }
+       
+   }
 }
 
 
@@ -94,11 +150,15 @@ int main(int argc, char *argv[])
     int pid = fork();
     if (pid == 0){
 		// modify this to pass along m
-        execl ("server", "server", (char *)NULL);
+        char *argv[] = {"./server", "-m", (char*)to_string(m).c_str(), NULL};
+        execvp(argv[0], argv);	
     }
     
 	FIFORequestChannel* chan = new FIFORequestChannel("control", FIFORequestChannel::CLIENT_SIDE);
+
     BoundedBuffer request_buffer(b);
+    BoundedBuffer response_buffer(b);
+
 	HistogramCollection hc;
 	
 	
@@ -107,15 +167,108 @@ int main(int argc, char *argv[])
     gettimeofday (&start, 0);
 
     /* Start all threads here */
+    thread patientThr [p];
+    thread workerThr [w];
+    thread histogramThr [h];
+
+    FIFORequestChannel* newWChans[w];
+
+    cout << "Creating Worker Channels...";
+
+    for (int i = 0; i < w; i++) { // Worker Channels
+
+        MESSAGE_TYPE nc = NEWCHANNEL_MSG;
+        chan->cwrite(&nc, sizeof(nc));
+        char ncChar[m];
+        chan->cread(&ncChar, sizeof(ncChar));
+        newWChans [i] = new FIFORequestChannel (ncChar, FIFORequestChannel::CLIENT_SIDE);
+
+    }
+
+    cout << "Worker Channels Created" << endl;
+
+    cout << "Creating Histograms...";
+
+    for (int i = 0; i < p; i++){
+
+        Histogram* hist = new Histogram (12, -3.0, 3.0);
+        hc.add(hist);
+    }
+
+    cout << "Histograms Created" << endl;
+
+    cout << "Creating Patient Threads...";
+
+    for (int i = 0; i < p; i++) {
+        patientThr[i] = thread (patient_thread_function, &request_buffer, i + 1, n);
+    }
+
+    cout << "Patient Threads Created" << endl;
+
+    cout << "Creating Worker Threads...";
+
+    for (int i = 0; i < w; i++) {
+
+        workerThr[i] = thread (worker_thread_function, &request_buffer, &response_buffer, newWChans[i], m);
+
+    }
+
+    cout << "Worker Threads Created" << endl;
+
+    cout << "Creating Histogram Threads...";
+
+    for (int i = 0; i < h; i++) {
+
+        histogramThr[i] = thread (histogram_thread_function, &response_buffer, &hc);
+    }
+
+    cout << "Histogram Threads Created" << endl;
 	
 
 	/* Join all threads here */
+
+    for (int i = 0; i < p; i++) {
+
+        patientThr[i].join();
+
+    }
+
+    for (int i = 0; i < w; i++) {
+
+        MESSAGE_TYPE quit = QUIT_MSG;
+
+        request_buffer.push ((char*) &quit, sizeof (MESSAGE_TYPE));
+    }
+
+    for (int i = 0; i < w; i++) {
+
+        workerThr[i].join();
+
+    }
+
+    Reply response;
+
+    response.ecg = 0;
+    response.p = -5;
+
+    for (int i = 0; i < w; i++) {
+
+        response_buffer.push((char*) &response, sizeof(response));
+    }
+
+    for (int i = 0; i < h; i++) {
+
+        histogramThr[i].join();
+    }
+
+
     gettimeofday (&end, 0);
     // print the results
 	hc.print ();
     int secs = (end.tv_sec * 1e6 + end.tv_usec - start.tv_sec * 1e6 - start.tv_usec)/(int) 1e6;
     int usecs = (int)(end.tv_sec * 1e6 + end.tv_usec - start.tv_sec * 1e6 - start.tv_usec)%((int) 1e6);
     cout << "Took " << secs << " seconds and " << usecs << " micro seconds" << endl;
+
 
     MESSAGE_TYPE q = QUIT_MSG;
     chan->cwrite ((char *) &q, sizeof (MESSAGE_TYPE));
