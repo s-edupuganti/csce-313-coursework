@@ -37,14 +37,14 @@ void patient_thread_function(BoundedBuffer* reqBuf, int patient, int num){
     }
 }
 
-void worker_thread_function(BoundedBuffer* reqBuf, BoundedBuffer* respBuf, FIFORequestChannel* newWChan, int bufferCap){
+void worker_thread_function(BoundedBuffer* reqBuf, BoundedBuffer* respBuf, FIFORequestChannel* newWChan, int bufferCap, string filename){
     
 
     while (true) {
 
-        char request [1024];
+        char request [bufferCap];
 
-        reqBuf->pop(request, 1024);
+        reqBuf->pop(request, bufferCap);
 
         MESSAGE_TYPE* msg = (MESSAGE_TYPE*) request;
 
@@ -72,21 +72,43 @@ void worker_thread_function(BoundedBuffer* reqBuf, BoundedBuffer* respBuf, FIFOR
             newWChan->cwrite(msg, sizeof(MESSAGE_TYPE));
             delete newWChan;
             break;
+
+        } else if (*msg == FILE_MSG) {
+            
+            char buf2[bufferCap];
+
+            filemsg *fm = (filemsg*) request;
+            // string fname = filename;
+            int len = sizeof (filemsg) + filename.size() + 1;
+
+            newWChan->cwrite(request, len);
+            newWChan->cread(buf2, bufferCap);
+
+            FILE* pfile = fopen(("received/" + filename).c_str(), "w");
+            fseek(pfile, fm->offset, SEEK_SET);
+            fwrite(buf2, 1, fm->length, pfile);
+
+            fclose(pfile);
+
+
+
+
+
         }
     }
 
 
 }
-void histogram_thread_function (BoundedBuffer* respBuf, HistogramCollection* histColl){
+void histogram_thread_function (BoundedBuffer* respBuf, HistogramCollection* histColl, int bufferCap){
     /*
 		Functionality of the histogram threads	
     */
 
    while (true) {
 
-       char response[1024];
+       char response[bufferCap];
 
-       respBuf->pop(response, 1024);
+       respBuf->pop(response, bufferCap);
 
        Reply* resp = (Reply*) response;
 
@@ -110,6 +132,8 @@ void histogram_thread_function (BoundedBuffer* respBuf, HistogramCollection* his
 int main(int argc, char *argv[])
 {
 
+    
+
     int opt;
     int n = 100;    		//default number of requests per "patient"
     int p = 10;     		// number of patients [1,15]
@@ -119,6 +143,8 @@ int main(int argc, char *argv[])
 	int m = MAX_MESSAGE; 	// default capacity of the message buffer
 
     string filename = "";
+
+    bool isFile = false;
 
     srand(time_t(NULL));
 
@@ -209,7 +235,7 @@ int main(int argc, char *argv[])
 
     for (int i = 0; i < w; i++) {
 
-        workerThr[i] = thread (worker_thread_function, &request_buffer, &response_buffer, newWChans[i], m);
+        workerThr[i] = thread (worker_thread_function, &request_buffer, &response_buffer, newWChans[i], m, filename);
 
     }
 
@@ -219,7 +245,7 @@ int main(int argc, char *argv[])
 
     for (int i = 0; i < h; i++) {
 
-        histogramThr[i] = thread (histogram_thread_function, &response_buffer, &hc);
+        histogramThr[i] = thread (histogram_thread_function, &response_buffer, &hc, m);
     }
 
     cout << "Histogram Threads Created" << endl;
