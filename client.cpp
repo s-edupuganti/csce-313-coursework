@@ -1,75 +1,47 @@
+
 #include "common.h"
 #include "BoundedBuffer.h"
 #include "Histogram.h"
 #include "common.h"
 #include "HistogramCollection.h"
 #include "FIFOreqchannel.h"
-#include <sys/wait.h>
 
 using namespace std;
 
+class Reply {
 
-void patient_thread_function(BoundedBuffer reqBuf, int patientNum, int ecgDataPoints){
+    public:
+
+        int p;
+        double ecg;
+
+};
+
+
+void patient_thread_function(BoundedBuffer* reqBuf, int patient, int num){
     /* What will the patient threads do? */
 
-    // datamsg args = (which patient?, which seconds?, which ecg - 1 or 2?)
+        /* What will the patient threads do? */
 
-    double diff = 0.004;
+    // datamsg args = (which patient?, which secondes?, which ecg - 1 or 2?)
 
-    datamsg dm (patientNum, 0.00, 1);
+    // double diff = 0.004;
+    // double numDble = (double) num;
 
-    for (double i = 0; i < (ecgDataPoints*diff); i += diff) {
+    datamsg dm (patient, 0.00, 1);
 
-        reqBuf.push((char*) &dm, sizeof (datamsg));
+    for (int i = 0; i < num; i++) {
 
-        dm.seconds += diff;
+        reqBuf->push ((char*) &dm, sizeof (datamsg));
+        dm.seconds += .004;
 
     }
-
 }
 
-void worker_thread_function(BoundedBuffer reqBuf, BoundedBuffer respBuf, FIFORequestChannel chan, int bufCap){
+void worker_thread_function(/*add necessary arguments*/){
     /*
 		Functionality of the worker threads	
     */
-
-
-
-   while (true) {
-
-       char buf [bufCap];
-
-       char request = reqBuf.pop(buf, bufCap);
-
-       
-
-       // reuqest = reqBuf.pop()
-
-       MESSAGE_TYPE msg = (MESSAGE_TYPE) request;
-       
-       // = MESSAGE_TYPE(request);
-
-
-       // if msg = data
-
-       if (msg == DATA_MSG) {
-
-           datamsg* dm = (datamsg*) request;
-
-           chan.cwrite(request, sizeof(request));
-
-
-
-
-
-
-
-       }
-
-       // if msg = file
-
-       // if msg = quit
-   }
 }
 void histogram_thread_function (/*add necessary arguments*/){
     /*
@@ -81,18 +53,20 @@ void histogram_thread_function (/*add necessary arguments*/){
 
 int main(int argc, char *argv[])
 {
+
     int opt;
     int n = 100;    		//default number of requests per "patient"
     int p = 10;     		// number of patients [1,15]
     int w = 100;    		//default number of worker threads
     int b = 20; 		// default capacity of the request buffer, you should change this default
+    int h;
 	int m = MAX_MESSAGE; 	// default capacity of the message buffer
 
     string filename = "";
 
     srand(time_t(NULL));
 
-    while ((opt = getopt(argc, argv, "n:p:w:b:m:")) != -1) {
+    while ((opt = getopt(argc, argv, "n:p:w:b:m:h:")) != -1) {
 
         switch(opt) {
             case 'n':
@@ -110,18 +84,17 @@ int main(int argc, char *argv[])
             case 'm':
                 m = atoi(optarg);
                 break;
+            case 'h':
+                h = atoi(optarg);
+                break;
         }
     }
-
-
+    
     
     int pid = fork();
     if (pid == 0){
 		// modify this to pass along m
-        // execl ("server", "-m", (char*)to_string(m).c_str(), (char *)NULL);
-
-        char *argv[] = {"./server", "-m", (char*)to_string(m).c_str(), NULL};
-        execvp(argv[0], argv);
+        execl ("server", "server", (char *)NULL);
     }
     
 	FIFORequestChannel* chan = new FIFORequestChannel("control", FIFORequestChannel::CLIENT_SIDE);
