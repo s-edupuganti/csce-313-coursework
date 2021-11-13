@@ -186,6 +186,8 @@ public:
 		//2. pop the front item of the queue. The popped item is a vector<char>
 		vector<char> poppedItem = q.front();
 		q.pop();
+		lock.unlock();
+
 
 
 		//3. Convert the popped vector<char> into a char*, copy that into buf, make sure that vector<char>'s length is <= bufcap
@@ -204,9 +206,9 @@ public:
 
 
 		//4. Return the vector's length to the caller so that he knows many bytes were popped
-		lock.unlock();
 
 		slot_cv.notify_one();
+		
 		return (poppedItem.size());
 	}
 };

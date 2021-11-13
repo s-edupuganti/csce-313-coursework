@@ -2,6 +2,7 @@
 #include <string.h>
 #include <iomanip>
 using namespace std;
+#include <mutex>
 
 #include "Histogram.h"
 
@@ -18,8 +19,12 @@ void Histogram::update (double value){
 	else if (bin_index >= nbins)
 		bin_index = nbins-1;
 
+	mutex m;
+
 	//cout << value << "-" << bin_index << endl;
+	m.lock();
 	hist [bin_index] ++;
+	m.unlock();
 }
 vector<int> Histogram::get_hist(){
 	return hist;
