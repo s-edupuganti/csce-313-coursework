@@ -5,6 +5,7 @@
 #include "common.h"
 #include "HistogramCollection.h"
 #include "FIFOreqchannel.h"
+#include <string>
 
 using namespace std;
 
@@ -37,7 +38,7 @@ void patient_thread_function(BoundedBuffer* reqBuf, int patient, int num){
     }
 }
 
-void worker_thread_function(BoundedBuffer* reqBuf, BoundedBuffer* respBuf, FIFORequestChannel* newWChan, int bufferCap, string filename){
+void worker_thread_function(BoundedBuffer* reqBuf, BoundedBuffer* respBuf, FIFORequestChannel* newWChan, int bufferCap){
     
     char request [1024];
 
@@ -75,39 +76,24 @@ void worker_thread_function(BoundedBuffer* reqBuf, BoundedBuffer* respBuf, FIFOR
 
         } else if (*msg == FILE_MSG) {
 
-            char buffRec[bufferCap];
+            char buf[bufferCap];
 
-            filemsg *fm = (filemsg*) request;
+            filemsg* fm = (filemsg*) request;
 
-            string filename = (char*) (fm + 1);
+            string fname = (char*) (fm + 1);
+            string filename = "received/" + fname;
 
-            int msgSize = sizeof(filemsg) + filename.size() + 1;
+            newWChan->cwrite(request, sizeof(filemsg) + fname.size() + 1);
+            newWChan->cread(buf, bufferCap);
 
-            newWChan->cwrite(request, msgSize);
-            newWChan->cread(buffRec, bufferCap);
+            __int_least64_t offset = fm->offset;
+            __int_least64_t len = fm->length;
 
-            string output = "received/" + filename;
+            FILE* pFile = fopen(filename.c_str(), "r+");
 
-            int_least64_t msgOffset = fm->offset;
-            int_least64_t msgLen = fm->length;
-
-            
-            
-            
-
-            // filemsg *fm = (filemsg*) request;
-            // // string fname = filename;
-            // int len = sizeof (filemsg) + filename.size() + 1;
-
-            // newWChan->cwrite(request, len);
-            // newWChan->cread(buf2, bufferCap);
-
-            FILE* pfile = fopen(output.c_str(), "r+");
-            fseek(pfile, msgOffset, SEEK_SET);
-            fwrite(buffRec, 1, msgLen, pfile);
-            fclose(pfile);
-
-     
+            fseek(pFile, offset, SEEK_SET);
+            fwrite(buf, 1, len, pFile);
+            fclose(pFile);
 
         }
     }
@@ -117,44 +103,45 @@ void worker_thread_function(BoundedBuffer* reqBuf, BoundedBuffer* respBuf, FIFOR
 
 void file_thread_function (BoundedBuffer* reqBuf, FIFORequestChannel* chan, int bufCap, string filename){
 
-    char buf[1024];
+    char request[1024];
+
+    filemsg fm(0, 0);
+
     __int64_t fileLength;
+    __int64_t remFileLength;
 
-    filemsg fm (0, 0);
-    string fname = "Received/" + filename;
+    string outputFile = "received/" + filename;
 
-    memcpy(buf, &fm, sizeof(fm));
-    strcpy(buf + sizeof(fm), filename.c_str());
+    memcpy(request, &fm, sizeof(fm));
+    strcpy(request + sizeof(fm), filename.c_str());
 
-    chan->cwrite(buf, sizeof(fm) + filename.size() + 1);
-    chan->cread(&fileLength, sizeof(__int64_t));
+    chan->cwrite(request, sizeof(fm) + filename.size() + 1);
+    chan->cread(&fileLength, sizeof(fileLength));
 
-    FILE* pfile = fopen(fname.c_str(), "w");
-    fseek(pfile, fileLength, SEEK_SET);
-    fclose(pfile);
+    FILE* pFile = fopen(outputFile.c_str(), "w");
+    fseek(pFile, fileLength, SEEK_SET);
+    fclose(pFile);
 
-    filemsg* fm2 = (filemsg*) buf;
+    filemsg* fm_ = (filemsg*) request;
 
-    __int64_t fileLengthTemp = fileLength;
+    remFileLength = fileLength;
 
-    while (fileLengthTemp > 0) {
+    while (remFileLength > 0) {
 
-        if (bufCap > fileLength) {
-
-            bufCap = fileLength;
-
+        if (remFileLength < (__int64_t) bufCap) {
+            fm_->length = remFileLength;
+        } else {
+            fm_->length = (__int64_t) bufCap;
         }
 
-        reqBuf->push(buf, sizeof(filemsg) + filename.size() + 1);
+        reqBuf->push(request, sizeof(filemsg) + outputFile.size() + 1);
 
-        fm2->offset += fm2->length;
-        fileLength -= fm2->length;
-;
+        fm_->offset += fm_->length;
+        remFileLength -= fm_->length;
+
     }
 
 }
-
-
 
 void histogram_thread_function (BoundedBuffer* respBuf, HistogramCollection* histColl, int bufferCap){
     /*
@@ -188,14 +175,12 @@ char response[1024];
 int main(int argc, char *argv[])
 {
 
-    
-
     int opt;
     int n = 100;    		//default number of requests per "patient"
     int p = 10;     		// number of patients [1,15]
     int w = 100;    		//default number of worker threads
     int b = 20; 		// default capacity of the request buffer, you should change this default
-    int h;
+    int h = 5;          // default histogram
 	int m = MAX_MESSAGE; 	// default capacity of the message buffer
 
     string filename = "";
@@ -258,10 +243,9 @@ int main(int argc, char *argv[])
 
     cout << "Creating Histograms...";
 
-
     for (int i = 0; i < p; i++){
 
-        Histogram* hist = new Histogram (10, -2.0, 2.0);
+        Histogram* hist = new Histogram (12, -3.0, 3.0);
         hc.add(hist);
 
     }
@@ -283,30 +267,32 @@ int main(int argc, char *argv[])
 
     cout << "Worker Channels Created" << endl;
 
-    if (isFile) {
 
-        thread fileThr;
+    thread fileThr;
+
+    if (isFile) {
 
         fileThr = thread (file_thread_function, &request_buffer, chan, m, filename);
 
+        cout << "Creating Worker Threads...";
+
         for (int i = 0; i < w; i++) {
 
-            workerThr[i] = thread (worker_thread_function, &request_buffer, &response_buffer, newWChans[i], m, filename);
+            workerThr[i] = thread (worker_thread_function, &request_buffer, &response_buffer, newWChans[i], m);
 
         }
 
-        for (int i = 0; i < h; i++) {
-
-            histogramThr[i] = thread (histogram_thread_function, &response_buffer, &hc, m);
-        }
+        cout << "Worker Threads Created" << endl;
 
         fileThr.join();
+
+        cout << "File Thread Joined" << endl;
 
         for (int i = 0; i < w; i++) {
 
             MESSAGE_TYPE quit = QUIT_MSG;
-            request_buffer.push ((char*) &quit, sizeof (MESSAGE_TYPE));
 
+            request_buffer.push ((char*) &quit, sizeof (MESSAGE_TYPE));
         }
 
         for (int i = 0; i < w; i++) {
@@ -315,24 +301,11 @@ int main(int argc, char *argv[])
 
         }
 
-        Reply response;
-
-        response.ecg = 0;
-        response.p = -1;
-
-        for (int i = 0; i < h; i++) {
-
-            response_buffer.push((char*) &response, sizeof(response));
-        }
-
-        for (int i = 0; i < h; i++) {
-
-            histogramThr[i].join();
-        }
+        cout << "Worker Thread Joined" << endl;
 
         gettimeofday (&end, 0);
 
-    } else {
+    } else { // if not file transfer
 
         cout << "Creating Patient Threads...";
 
@@ -346,7 +319,7 @@ int main(int argc, char *argv[])
 
         for (int i = 0; i < w; i++) {
 
-            workerThr[i] = thread (worker_thread_function, &request_buffer, &response_buffer, newWChans[i], m, filename);
+            workerThr[i] = thread (worker_thread_function, &request_buffer, &response_buffer, newWChans[i], m);
 
         }
 
@@ -370,6 +343,8 @@ int main(int argc, char *argv[])
 
         }
 
+        cout << "Patient Threads Joined" << endl;
+
         for (int i = 0; i < w; i++) {
 
             MESSAGE_TYPE quit = QUIT_MSG;
@@ -382,6 +357,8 @@ int main(int argc, char *argv[])
             workerThr[i].join();
 
         }
+
+        cout << "Worker Threads Joined" << endl;
 
         Reply response;
 
@@ -398,7 +375,12 @@ int main(int argc, char *argv[])
             histogramThr[i].join();
         }
 
+        cout << "Histogram Threads Joined" << endl;
+
         gettimeofday (&end, 0);
+
+        cout << "Final HistogramOutput: " << endl;
+        cout << endl;
 
         hc.print ();
 

@@ -19,7 +19,7 @@ void Histogram::update (double value){
 	else if (bin_index >= nbins)
 		bin_index = nbins-1;
 
-	mutex m;
+	// mutex m;
 
 	//cout << value << "-" << bin_index << endl;
 	m.lock();
