@@ -386,12 +386,10 @@ int main(int argc, char *argv[])
 
     }
 
-    
     // print the results
     int secs = (end.tv_sec * 1e6 + end.tv_usec - start.tv_sec * 1e6 - start.tv_usec)/(int) 1e6;
     int usecs = (int)(end.tv_sec * 1e6 + end.tv_usec - start.tv_sec * 1e6 - start.tv_usec)%((int) 1e6);
     cout << "Took " << secs << " seconds and " << usecs << " micro seconds" << endl;
-
 
     MESSAGE_TYPE q = QUIT_MSG;
     chan->cwrite ((char *) &q, sizeof (MESSAGE_TYPE));
