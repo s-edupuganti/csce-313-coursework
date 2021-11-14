@@ -272,7 +272,11 @@ int main(int argc, char *argv[])
 
     if (isFile) {
 
+        cout << "File transfer starting!" << endl;
+
         fileThr = thread (file_thread_function, &request_buffer, chan, m, filename);
+
+        cout << "File Thread Created" << endl;
 
         cout << "Creating Worker Threads...";
 
