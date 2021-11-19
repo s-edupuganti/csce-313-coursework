@@ -1,5 +1,6 @@
 #include "common.h"
 #include "TCPreqchannel.h"
+#include <sys/socket.h>
 using namespace std;
 
 /*--------------------------------------------------------------------------*/
@@ -19,6 +20,14 @@ TCPRequestChannel::TCPRequestChannel(int sockfd) {
 TCPRequestChannel::~TCPRequestChannel() {
 
 	close(sockfd);
+}
+
+int TCPRequestChannel::cread(void* msgbuf, int buflen) {
+	return recv(sockfd, msgbuf, buflen, 0);
+}
+
+int TCPRequestChannel::Cwrite(void* msgbuf, int msglen) {
+	return send (sockfd, msgbuf, msglen, 0);
 }
 
 // FIFORequestChannel::FIFORequestChannel(const string _name, const Side _side) : my_name( _name), my_side(_side){
