@@ -9,6 +9,8 @@ using namespace std;
 
 TCPRequestChannel::TCPRequestChannel(const string hostname, const string port_no) {
 
+	
+
 }
 
 TCPRequestChannel::TCPRequestChannel(int sockfd) {
