@@ -13,7 +13,7 @@
 #include <vector>
 #include <math.h>
 #include <unistd.h>
-#include "FIFOreqchannel.h"
+#include "TCPreqchannel.h"
 using namespace std;
 
 

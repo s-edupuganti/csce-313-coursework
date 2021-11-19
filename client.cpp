@@ -4,7 +4,7 @@
 #include "Histogram.h"
 #include "common.h"
 #include "HistogramCollection.h"
-#include "FIFOreqchannel.h"
+#include "TCPreqchannel.h"
 #include <string>
 
 using namespace std;
@@ -38,7 +38,7 @@ void patient_thread_function(BoundedBuffer* reqBuf, int patient, int num){
     }
 }
 
-void worker_thread_function(BoundedBuffer* reqBuf, BoundedBuffer* respBuf, FIFORequestChannel* newWChan, int bufferCap){
+void worker_thread_function(BoundedBuffer* reqBuf, BoundedBuffer* respBuf, TCPRequestChannel* newWChan, int bufferCap){
     
     char request [1024];
 
@@ -101,7 +101,7 @@ void worker_thread_function(BoundedBuffer* reqBuf, BoundedBuffer* respBuf, FIFOR
 
 }
 
-void file_thread_function (BoundedBuffer* reqBuf, FIFORequestChannel* chan, int bufCap, string filename){
+void file_thread_function (BoundedBuffer* reqBuf, TCPRequestChannel* chan, int bufCap, string filename){
 
     char request[1024];
 
@@ -184,12 +184,14 @@ int main(int argc, char *argv[])
 	int m = MAX_MESSAGE; 	// default capacity of the message buffer
 
     string filename = "";
+    string hostName = "";
+    string port = "";
 
     bool isFile = false;
 
     srand(time_t(NULL));
 
-    while ((opt = getopt(argc, argv, "n:p:w:b:m:h:f:")) != -1) {
+    while ((opt = getopt(argc, argv, "n:p:w:b:m:h:f:r:a:")) != -1) {
 
         switch(opt) {
             case 'n':
@@ -214,6 +216,13 @@ int main(int argc, char *argv[])
                 filename = optarg;
                 isFile = true;
                 break;
+            case 'r':
+                port = optarg;
+                break;
+            case 'a':
+                hostName = optarg;
+                break;
+
         }
     }
     
@@ -225,8 +234,8 @@ int main(int argc, char *argv[])
         execvp(argv[0], argv);	
     }
     
-	FIFORequestChannel* chan = new FIFORequestChannel("control", FIFORequestChannel::CLIENT_SIDE);
-    FIFORequestChannel* newWChans[w];
+	TCPRequestChannel* chan = new TCPRequestChannel("control", TCPRequestChannel::CLIENT_SIDE);
+    TCPRequestChannel* newWChans[w];
 
     BoundedBuffer request_buffer(b);
     BoundedBuffer response_buffer(b);
@@ -256,12 +265,11 @@ int main(int argc, char *argv[])
 
     for (int i = 0; i < w; i++) { // Worker Channels
 
-        MESSAGE_TYPE nc = NEWCHANNEL_MSG;
-        chan->cwrite(&nc, sizeof(nc));
-        char ncChar[1024];
-        chan->cread(&ncChar, 1024);
-        newWChans[i] = new FIFORequestChannel (ncChar, FIFORequestChannel::CLIENT_SIDE);
-
+        // MESSAGE_TYPE nc = NEWCHANNEL_MSG;
+        // chan->cwrite(&nc, sizeof(nc));
+        // char ncChar[1024];
+        // chan->cread(&ncChar, 1024);
+        newWChans[i] = new TCPRequestChannel (hostName, port);
 
     }
 
