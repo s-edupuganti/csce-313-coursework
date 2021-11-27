@@ -13,7 +13,7 @@ TCPRequestChannel::TCPRequestChannel(const string hostname, const string port_no
 
 	if (hostname.empty()) {
 
-		int sockfd, new_fd;                 // listen on sock_fd, new connection on new_fd
+		// int sockfd, new_fd;                 // listen on sock_fd, new connection on new_fd
 		struct addrinfo hints, *serv;
 		struct sockaddr_storage their_addr; //connector's address information
 		socklen_t sin_size;
@@ -63,7 +63,7 @@ TCPRequestChannel::TCPRequestChannel(const string hostname, const string port_no
 	} else {
 
 		struct addrinfo hints, *res;
-		int sockfd;
+		// int sockfd;
 
 		// first, load up address structs with getaddrinfo():
 			// PLEASE READ ME: https://en.wikipedia.org/wiki/Getaddrinfo
@@ -71,6 +71,7 @@ TCPRequestChannel::TCPRequestChannel(const string hostname, const string port_no
 		hints.ai_family = AF_UNSPEC;
 		hints.ai_socktype = SOCK_STREAM;
 		int status;
+
 		if ((status = getaddrinfo (hostname.c_str(), port_no.c_str(), &hints, &res)) != 0) {
 				cerr << "getaddrinfo: " << gai_strerror(status) << endl;
 				exit -1;
@@ -88,6 +89,8 @@ TCPRequestChannel::TCPRequestChannel(const string hostname, const string port_no
 			perror ("Cannot Connect");
 			exit -1;
 		}
+
+		freeaddrinfo(res);
 		//
 		// cout << "Connected " << endl;
 		// talk_to_server(sockfd);
@@ -101,9 +104,9 @@ TCPRequestChannel::TCPRequestChannel(const string hostname, const string port_no
 
 }
 
-TCPRequestChannel::TCPRequestChannel(int sockfd) {
+TCPRequestChannel::TCPRequestChannel(int sockfd_) {
 
-	sockfd = sockfd;
+	sockfd = sockfd_;
 
 }
 
