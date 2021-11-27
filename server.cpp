@@ -14,6 +14,10 @@
 #include <math.h>
 #include <unistd.h>
 #include "TCPreqchannel.h"
+
+#include <sys/socket.h>
+#include <netdb.h>
+#include <string.h>
 using namespace std;
 
 
@@ -28,17 +32,17 @@ char ival;
 vector<string> all_data [NUM_PERSONS];
 
 
-void process_newchannel_request (TCPRequestChannel *_channel){
-	nchannels++;
-	string new_channel_name = "data" + to_string(nchannels) + "_";
-	char buf [30];
-	strcpy (buf, new_channel_name.c_str());
-	_channel->cwrite(buf, new_channel_name.size()+1);
+// void process_newchannel_request (TCPRequestChannel *_channel){
+// 	nchannels++;
+// 	string new_channel_name = "data" + to_string(nchannels) + "_";
+// 	char buf [30];
+// 	strcpy (buf, new_channel_name.c_str());
+// 	_channel->cwrite(buf, new_channel_name.size()+1);
 
-	TCPRequestChannel *data_channel = new TCPRequestChannel (new_channel_name, TCPRequestChannel::SERVER_SIDE);
-	thread thread_for_client (handle_process_loop, data_channel);
-	thread_for_client.detach();
-}
+// 	TCPRequestChannel *data_channel = new TCPRequestChannel (new_channel_name, TCPRequestChannel::SERVER_SIDE);
+// 	thread thread_for_client (handle_process_loop, data_channel);
+// 	thread_for_client.detach();
+// }
 
 void populate_file_data (int person){
 	//cout << "populating for person " << person << endl;
@@ -133,8 +137,6 @@ int process_request(TCPRequestChannel *rc, char* _request)
 	}
 	else if (m == FILE_MSG){
 		process_file_request (rc, _request);
-	}else if (m == NEWCHANNEL_MSG){
-		process_newchannel_request(rc);
 	}else{
 		process_unknown_request(rc);
 	}
@@ -170,12 +172,20 @@ void handle_process_loop(TCPRequestChannel *channel){
 
 int main(int argc, char *argv[]){
 	buffercapacity = MAX_MESSAGE;
+	string port = "";
 	int opt;
-	while ((opt = getopt(argc, argv, "m:")) != -1) {
+
+	struct sockaddr_storage their_addr; //connector's address information
+	socklen_t sin_size;
+
+	while ((opt = getopt(argc, argv, "m:r:")) != -1) {
 		switch (opt) {
 			case 'm':
 				buffercapacity = atoi (optarg);
                 cout << "buffer capacity is " << buffercapacity << " bytes" << endl;
+				break;
+			case 'r':
+				port = optarg;
 				break;
 		}
 	}
@@ -183,9 +193,29 @@ int main(int argc, char *argv[]){
 	for (int i=0; i<NUM_PERSONS; i++){
 		populate_file_data(i+1);
 	}
+
+	TCPRequestChannel* control_channel = new TCPRequestChannel ("", port);
+
+
+	while(1) {  // main accept() loop
+		sin_size = sizeof their_addr;
+		int client_socket = accept (control_channel->getfd(), (struct sockaddr *)&their_addr, &sin_size);
+		if (client_socket == -1) {
+			perror("accept");
+			continue;
+		}
+
+		TCPRequestChannel* clientChan = new TCPRequestChannel(client_socket);
+
+		thread t (handle_process_loop, clientChan);
+		t.detach (); 
+	}
+
+
+
 	
-	TCPRequestChannel* control_channel = new TCPRequestChannel ("control", TCPRequestChannel::SERVER_SIDE);
-	handle_process_loop (control_channel);
+	// TCPRequestChannel* control_channel = new TCPRequestChannel ("control", TCPRequestChannel::SERVER_SIDE);
+	// handle_process_loop (control_channel);
 	cout << "Server terminated" << endl;
 	//delete control_channel;
 }

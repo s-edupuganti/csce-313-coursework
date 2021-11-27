@@ -227,14 +227,14 @@ int main(int argc, char *argv[])
     }
     
     
-    int pid = fork();
-    if (pid == 0){
-		// modify this to pass along m
-        char *argv[] = {"./server", "-m", (char*)to_string(m).c_str(), NULL};
-        execvp(argv[0], argv);	
-    }
+    // int pid = fork();
+    // if (pid == 0){
+	// 	// modify this to pass along m
+    //     char *argv[] = {"./server", "-m", (char*)to_string(m).c_str(), NULL};
+    //     execvp(argv[0], argv);	
+    // }
     
-	TCPRequestChannel* chan = new TCPRequestChannel("control", TCPRequestChannel::CLIENT_SIDE);
+	TCPRequestChannel* chan = new TCPRequestChannel(hostName, port);
     TCPRequestChannel* newWChans[w];
 
     BoundedBuffer request_buffer(b);
