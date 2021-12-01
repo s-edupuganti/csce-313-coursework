@@ -172,8 +172,7 @@ char response[1024];
 
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 
     int opt;
     int n = 100;    		//default number of requests per "patient"
