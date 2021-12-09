@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
 
     // cout << "Last Char in URL: " << URL[domExtFound-1] << endl;
 
-    if (URL[domExtFound] == NULL || URL[domExtFound] == '/') {
+    if (URL[domExtFound+1] == NULL) {
 
         path = "/";
 
