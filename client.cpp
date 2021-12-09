@@ -69,6 +69,8 @@ int main(int argc, char** argv) {
 
     } else {
         cout << "Still working on this part!" << endl;
+
+        path = URL.substr(domExtFound);
     }
 
 
