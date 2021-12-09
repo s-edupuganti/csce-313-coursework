@@ -86,40 +86,54 @@ int main(int argc, char** argv) {
     ofstream output;
 
     int nbytes;
+    int i = 0;
 
-
+    bool begin = false;
     while (true) {
 
-        nbytes = chan->cread(&msg, 255);
+        
 
-        // cout << nbytes << endl;
-
-        if (nbytes == 0) {
-            break;
-        }
-        // msg[255] = '\0';
-
-
-        // for (int i = 0; i < 256; i++) {
-        //     cout << msg[i];
+        // if (i == 2) {
+        //     break;
         // }
 
-        // msg += '\0';
-        string s;
-        if (nbytes < 255) {
-            s = "";
-            for (int i = 0; i < nbytes; i++) {
-                s += msg[i];
+            nbytes = chan->cread(&msg, 255);
+
+            // cout << nbytes << endl;
+
+            if (nbytes == 0) {
+                break;
             }
-        } else {
-            s = string(msg);
+
+            string s;
+            if (nbytes < 255) {
+                s = "";
+                for (int i = 0; i < nbytes; i++) {
+                    if (msg[i] == '<') {
+                        begin = true;
+                    }
+                    s += msg[i];
+                }
+            } else {
+                s = string(msg);
+                if (s.find('<') != string::npos) {
+                    if (!begin) {
+                        int index = s.find('<');
+                        s = s.substr(index);
+                        begin = true;
+                    }
+                }
+
+            }
+            // string ss(msg);
+
+            // cout << s << endl;
+            // i+=1;
+        if (begin) {
+            output.open(filename, std::ios::app);
+            output << s;
+            output.close();
         }
-        // string ss(msg);
-
-        output.open(filename, std::ios::app);
-        output << s;
-        output.close();
-
         // chan->cread(&msg, 256);
 
     }
