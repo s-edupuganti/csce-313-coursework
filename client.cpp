@@ -89,9 +89,7 @@ void handleStatusCode(string newURL, string keepFilename) {
             } else {
                 cout << "2XX STATUS CODE" << endl;
             }
- 
         }
-
 
         if (nbytes == 0) {
             break;
