@@ -68,9 +68,12 @@ int main(int argc, char** argv) {
         cout << "The path is: " << path << endl;
 
     } else {
-        cout << "Still working on this part!" << endl;
+        // cout << "Still working on this part!" << endl;
 
         path = URL.substr(domExtFound);
+
+        cout << "The hostname is: " << hostname << endl;
+        cout << "The path is: " << path << endl;
     }
 
 
