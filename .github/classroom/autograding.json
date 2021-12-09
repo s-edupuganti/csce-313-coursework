@@ -2,7 +2,7 @@
     "tests": [
       {
         "name": "URL without a path",
-        "setup": "make",
+        "setup": "rm -f experiment control; make",
         "run": "./client http://www.w3.org experiment; wget http://www.w3.org -O control; diff experiment control",
         "input": "",
         "output": "",
@@ -12,7 +12,7 @@
       },
       {
         "name": "URL with a path",
-        "setup": "make",
+        "setup": "rm -f experiment control; make",
         "run": "./client http://www.w3.org/Protocols/HTTP/1.0/spec.html experiment; wget http://www.w3.org/Protocols/HTTP/1.0/spec.html -O control; diff experiment control",
         "input": "",
         "output": "",
@@ -22,7 +22,7 @@
       },
       {
         "name": "URL with 302",
-        "setup": "make",
+        "setup": "rm -f experiment control; make",
         "run": "./client http://w3.org experiment; wget http://w3.org -O control; diff experiment control",
         "input": "",
         "output": "",
@@ -32,7 +32,7 @@
       },
       {
         "name": "URL with chunked transfer",
-        "setup": "make",
+        "setup": "rm -f experiment control; make",
         "run": "./client https://jigsaw.w3.org/HTTP/ChunkedScript experiment; wget https://jigsaw.w3.org/HTTP/ChunkedScript -O control; diff experiment control",
         "input": "",
         "output": "",
@@ -42,7 +42,7 @@
       },
       {
         "name": "URL with 404 error",
-        "setup": "make",
+        "setup": "rm -f experiment control; make",
         "run": "./client https://www.w3.org/dfsafdsfdasafsd/; [ $? -eq 1 ]",
         "input": "",
         "output": "",
