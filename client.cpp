@@ -186,47 +186,17 @@ int main(int argc, char** argv) {
 
     int nbytes;
     bool begin = false;
-    // while (true) {
-    //         nbytes = chan->cread(&msg, 255);
-
-    //         if (nbytes == 0) {
-    //             break;
-    //         }
-
-        //     string s;
-        //     if (nbytes < 255) {
-        //         s = "";
-        //         for (int i = 0; i < nbytes; i++) {
-        //             if (msg[i] == '<') {
-        //                 begin = true;
-        //             }
-        //             s += msg[i];
-        //         }
-        //     } else {
-        //         s = string(msg);
-        //         if (s.find('<') != string::npos) {
-        //             if (!begin) {
-        //                 int index = s.find('<');
-        //                 s = s.substr(index);
-        //                 begin = true;
-        //             }
-        //         }
-        //     }
-
-        // if (begin) {
-        //     output.open(filename, std::ios::app);
-        //     output << s;
-        //     output.close();
-        // }
-    // }
-
     bool foundStatusCode = false;
-
+    bool isChunked = false;
 
 
     while (true) {
 
         nbytes = chan->cread(&msg, 255);
+
+        if (nbytes == 0) {
+            break;
+        }
 
         if (!foundStatusCode) {
             string firstLine(msg);
@@ -248,8 +218,6 @@ int main(int argc, char** argv) {
                     }
                 }
 
-
-                // delete chan;
                 handleStatusCode(url, filename);
                 break;
             } else if (statusCode == '4') {
@@ -261,11 +229,65 @@ int main(int argc, char** argv) {
  
         }
 
+        if (!isChunked) {
+            // chan->cread(&msg, 255);
+
+            string firstLine(msg);
+            
+            cout << endl;
+            cout << firstLine << endl;
+            cout << endl;
 
 
-        if (nbytes == 0) {
-            break;
+            stringstream ss(firstLine);
+            string line;
+            while (getline(ss, line)) {
+                if (line.find("transfer-encoding: chunked") != string::npos) {
+                    isChunked = true;
+                    // cout << line.find("transfer-encoding: chunked") << endl;
+                }
+            }
+            
+
         }
+
+
+        if (isChunked) {
+
+            // string tempString(msg);
+            // cout << tempString[10] << endl;
+            // cout << tempString[11] << endl;
+            // cout << tempString[12] << endl;
+            // cout << tempString.find("transfer-encoding: chunked") << endl;
+            // cout << tempString[tempString.find("transfer-encoding: chunked") + 36] << endl;
+
+            string s;
+            if (nbytes < 255) {
+                s = "";
+                for (int i = 0; i < nbytes; i++) {
+                    s+= msg;
+                }
+            } else {
+                s = string(msg);
+                if (s.find("transfer-encoding: chunked") != string::npos) {
+                    if (!begin) {
+                        int index = s.find("transfer-encoding: chunked") + 36;
+                        s = s.substr(index);
+                        begin = true;
+                    }
+                }
+            }
+
+
+            if (begin) {
+                output.open(filename, std::ios::app | std::ios::binary);
+                output << s;
+                output.close();
+            }
+
+            
+
+        } else {
 
             string s;
             if (nbytes < 255) {
@@ -277,6 +299,8 @@ int main(int argc, char** argv) {
                     s += msg[i];
                 }
             } else {
+
+
                 s = string(msg);
                 if (s.find('<') != string::npos) {
                     if (!begin) {
@@ -287,11 +311,11 @@ int main(int argc, char** argv) {
                 }
             }
 
-        if (begin) {
-            output.open(filename, std::ios::app);
-            output << s;
-            output.close();
+            if (begin) {
+                output.open(filename, std::ios::app | std::ios::binary);
+                output << s;
+                output.close();
+            }
         }
-
     }
 }
