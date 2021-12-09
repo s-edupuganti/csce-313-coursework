@@ -6,22 +6,126 @@
 #include "common.h"
 #include "TCPreqchannel.h"
 
-// #include <typeinfo>
-
 using namespace std;
 
-void remSubstr(string &str, string &substr) {
+void handleStatusCode(string newURL, string keepFilename) {
 
-    size_t substrPos = str.find(substr);
+    string URL = newURL;
+    string filename = keepFilename;
+    string hostname;
+    string path;
 
-    if (substrPos != string::npos) {
-        str.erase(substrPos, substr.length());
+    cout << "The URL is: " << URL << endl;
+
+    size_t httpFound = URL.find("://");
+    size_t domExtFound = URL.find(".org");
+
+    httpFound = httpFound + 3;
+    domExtFound = domExtFound + 4;
+
+    int hostnameChar = domExtFound - httpFound;
+
+    cout << "Position of :// is: " << httpFound << endl;
+    cout << "Position of .org is: " << (domExtFound) << endl;
+
+    hostname = URL.substr(httpFound, hostnameChar);
+
+    if (URL[domExtFound+1] == NULL) {
+
+        path = "/";
+
+        cout << "The hostname is: " << hostname << endl;
+        cout << "The path is: " << path << endl;
+
+    } else {
+
+        path = URL.substr(domExtFound);
+
+        cout << "The hostname is: " << hostname << endl;
+        cout << "The path is: " << path << endl;
+    }
+
+    TCPRequestChannel* chan = new TCPRequestChannel(hostname, "80");
+
+    string request = "GET " + path + " HTTP/1.1\r\nHost: " + hostname + "\r\nConnection: close\r\n\r\n";
+
+    chan->cwrite((char*)request.c_str(), request.size());
+    char msg[256];
+    msg[255] = '\0';
+
+    ofstream output;
+
+    int nbytes;
+    bool begin = false;
+    bool foundStatusCode = false;
+
+    while (true) {
+
+        nbytes = chan->cread(&msg, 255);
+
+        if (!foundStatusCode) {
+            string firstLine(msg);
+            char statusCode = firstLine[firstLine.find("HTTP/1.1") + 9];
+            foundStatusCode = true;
+            cout << endl;
+            cout << firstLine << endl;
+            cout << endl;
+
+            if (statusCode == '3') {
+                cout << "3XX STATUS CODE" << endl;
+                stringstream ss(firstLine);
+                string line;
+                string url = "";
+                while (getline(ss, line)) {
+                    if (line.find("location") != string::npos) {
+                        url = line.substr((line.find("location") + 10));
+                        cout << "url: " << url << endl;
+                    }
+                }
+                break;
+            } else if (statusCode == '4') {
+                cout << "4XX STATUS CODE" << endl;
+                exit(1);
+            }
+ 
+        }
+
+
+        if (nbytes == 0) {
+            break;
+        }
+
+            string s;
+            if (nbytes < 255) {
+                s = "";
+                for (int i = 0; i < nbytes; i++) {
+                    if (msg[i] == '<') {
+                        begin = true;
+                    }
+                    s += msg[i];
+                }
+            } else {
+                s = string(msg);
+                if (s.find('<') != string::npos) {
+                    if (!begin) {
+                        int index = s.find('<');
+                        s = s.substr(index);
+                        begin = true;
+                    }
+                }
+            }
+
+        if (begin) {
+            output.open(filename, std::ios::app);
+            output << s;
+            output.close();
+        }
+
     }
 }
 
-int main(int argc, char** argv) {
 
-    // cout << "The type of the URL Input is: " << typeid(argv[1]).name() << endl;
+int main(int argc, char** argv) {
 
     string URL = argv[1];
     string filename;
@@ -40,10 +144,6 @@ int main(int argc, char** argv) {
     size_t httpFound = URL.find("://");
     size_t domExtFound = URL.find(".org");
 
-    // if (URL.find("#")) {
-
-    // }
-
     httpFound = httpFound + 3;
     domExtFound = domExtFound + 4;
 
@@ -54,15 +154,9 @@ int main(int argc, char** argv) {
 
     hostname = URL.substr(httpFound, hostnameChar);
 
-    // cout << "Last Char in URL: " << URL[domExtFound-1] << endl;
-
     if (URL[domExtFound+1] == NULL) {
 
         path = "/";
-
-        // URL = URL + '/';
-        // cout << "The NEW URL is: " << URL << endl;
-
 
         cout << "The hostname is: " << hostname << endl;
         cout << "The path is: " << path << endl;
@@ -91,24 +185,81 @@ int main(int argc, char** argv) {
     ofstream output;
 
     int nbytes;
-    int i = 0;
-
     bool begin = false;
+    // while (true) {
+    //         nbytes = chan->cread(&msg, 255);
+
+    //         if (nbytes == 0) {
+    //             break;
+    //         }
+
+        //     string s;
+        //     if (nbytes < 255) {
+        //         s = "";
+        //         for (int i = 0; i < nbytes; i++) {
+        //             if (msg[i] == '<') {
+        //                 begin = true;
+        //             }
+        //             s += msg[i];
+        //         }
+        //     } else {
+        //         s = string(msg);
+        //         if (s.find('<') != string::npos) {
+        //             if (!begin) {
+        //                 int index = s.find('<');
+        //                 s = s.substr(index);
+        //                 begin = true;
+        //             }
+        //         }
+        //     }
+
+        // if (begin) {
+        //     output.open(filename, std::ios::app);
+        //     output << s;
+        //     output.close();
+        // }
+    // }
+
+    bool foundStatusCode = false;
+
+
+
     while (true) {
 
-        
+        nbytes = chan->cread(&msg, 255);
 
-        // if (i == 2) {
-        //     break;
-        // }
+        if (!foundStatusCode) {
+            string firstLine(msg);
+            char statusCode = firstLine[firstLine.find("HTTP/1.1") + 9];
+            foundStatusCode = true;
 
-            nbytes = chan->cread(&msg, 255);
+            if (statusCode == '3') {
+                cout << "3XX STATUS CODE" << endl;
+                stringstream ss(firstLine);
+                string line;
+                string url = "";
+                while (getline(ss, line)) {
+                    if (line.find("location") != string::npos) {
+                        url = line.substr((line.find("location") + 10));
+                        cout << "url: " << url << endl;
+                    }
+                }
 
-            // cout << nbytes << endl;
 
-            if (nbytes == 0) {
+                // delete chan;
+                handleStatusCode(url, filename);
                 break;
+            } else if (statusCode == '4') {
+                cout << "4XX STATUS CODE" << endl;
+                exit(1);
             }
+ 
+        }
+
+
+        if (nbytes == 0) {
+            break;
+        }
 
             string s;
             if (nbytes < 255) {
@@ -128,44 +279,13 @@ int main(int argc, char** argv) {
                         begin = true;
                     }
                 }
-
             }
-            // string ss(msg);
 
-            // cout << s << endl;
-            // i+=1;
         if (begin) {
             output.open(filename, std::ios::app);
             output << s;
             output.close();
         }
-        // chan->cread(&msg, 256);
 
     }
-
-
-
-
-    // cout << "Is Char Empty?: " << URL[domExtFound] << endl;
-
-    // URL[domExtFound] = '/';
-
-    //  cout << "Is Char Emptyv2.0?: " << URL[domExtFound] << endl;
-
-    // if (URL[domExtFound] == "") {
-    //     URL[domExtFound] = '/';
-    //     cout << "The New URL is: " << URL << endl;
-    // }
-
-
-
-
-
-    // remSubstr(argv[1], ".org");
-
-
-
-
-    
-
 }
