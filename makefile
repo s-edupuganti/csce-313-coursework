@@ -12,4 +12,4 @@ client: client.cpp TCPreqchannel.o common.o
 	g++ -g -w -std=c++17 -o client client.cpp TCPreqchannel.o common.o -lpthread -lrt
 
 clean:
-	rm -rf *.o client 
+	rm -rf *.o client *.html

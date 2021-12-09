@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
     string path;
 
     if (argv[2] == NULL) {
-        cout << "No second arguement." << endl;
+        filename = "index";
     } else {
         filename = argv[2];
         cout << "The filename is: " << filename << endl;
@@ -78,13 +78,52 @@ int main(int argc, char** argv) {
 
     string request = "GET " + path + " HTTP/1.1\r\nHost: " + hostname + "\r\nConnection: close\r\n\r\n";
 
+    chan->cwrite((char*)request.c_str(), request.size());
+    // char msg[MAX_LEN];
+    char msg[256];
+    msg[255] = '\0';
+
+    ofstream output;
+
+    int nbytes;
 
 
+    while (true) {
+
+        nbytes = chan->cread(&msg, 255);
+
+        cout << nbytes << endl;
+
+        if (nbytes == 0) {
+            break;
+        }
+        // msg[255] = '\0';
 
 
-    
+        // for (int i = 0; i < 256; i++) {
+        //     cout << msg[i];
+        // }
 
-    
+        // msg += '\0';
+        string s;
+        if (nbytes < 255) {
+            s = "";
+            for (int i = 0; i < nbytes; i++) {
+                s += msg[i];
+            }
+        } else {
+            s = string(msg);
+        }
+        // string ss(msg);
+
+        output.open(filename + ".html", std::ios::app);
+        output << s;
+        output.close();
+
+        // chan->cread(&msg, 256);
+
+    }
+
 
 
 
