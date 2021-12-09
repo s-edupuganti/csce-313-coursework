@@ -92,7 +92,7 @@ int main(int argc, char** argv) {
 
         nbytes = chan->cread(&msg, 255);
 
-        cout << nbytes << endl;
+        // cout << nbytes << endl;
 
         if (nbytes == 0) {
             break;
@@ -116,7 +116,7 @@ int main(int argc, char** argv) {
         }
         // string ss(msg);
 
-        output.open(filename + ".html", std::ios::app);
+        output.open(filename, std::ios::app);
         output << s;
         output.close();
 
