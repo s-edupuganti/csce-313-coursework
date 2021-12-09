@@ -86,6 +86,8 @@ void handleStatusCode(string newURL, string keepFilename) {
             } else if (statusCode == '4') {
                 cout << "4XX STATUS CODE" << endl;
                 exit(1);
+            } else {
+                cout << "2XX STATUS CODE" << endl;
             }
  
         }
@@ -255,11 +257,12 @@ int main(int argc, char** argv) {
             } else if (statusCode == '4') {
                 cout << "4XX STATUS CODE" << endl;
                 exit(1);
+            } else {
+                cout << "2XX STATUS CODE" << endl;
             }
  
         }
 
-        cout << "2XX STATUS CODE" << endl;
 
 
         if (nbytes == 0) {
