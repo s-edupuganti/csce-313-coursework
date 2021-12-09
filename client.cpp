@@ -67,9 +67,9 @@ void handleStatusCode(string newURL, string keepFilename) {
             string firstLine(msg);
             char statusCode = firstLine[firstLine.find("HTTP/1.1") + 9];
             foundStatusCode = true;
-            cout << endl;
-            cout << firstLine << endl;
-            cout << endl;
+            // cout << endl;
+            // cout << firstLine << endl;
+            // cout << endl;
 
             if (statusCode == '3') {
                 cout << "3XX STATUS CODE" << endl;
@@ -241,6 +241,9 @@ int main(int argc, char** argv) {
                 while (getline(ss, line)) {
                     if (line.find("location") != string::npos) {
                         url = line.substr((line.find("location") + 10));
+                        if (url[url.size() - 1] == '\r' || url[url.size() - 1] == '\n') {
+                            url.erase(url.size() - 1);
+                        }
                         cout << "url: " << url << endl;
                     }
                 }
@@ -255,6 +258,8 @@ int main(int argc, char** argv) {
             }
  
         }
+
+        cout << "2XX STATUS CODE" << endl;
 
 
         if (nbytes == 0) {
