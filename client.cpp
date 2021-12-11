@@ -223,37 +223,15 @@ int main(int argc, char** argv) {
     int totalNum = 0;
     int value = 0;
 
+    string testString;
+
+    stringstream chunkOutput;
+
 
     while (true) {
 
-        // cout << endl;
-
-
-
         nbytes = chan->cread(&msg, 255);
 
-        // cout << "HELLO" << endl;
-
-        // for (int i = 0; i < nbytes; i++) {
-        //     cout << msg[i];
-        // }
-
-        // cout << endl;
-        // break;
-
-        // if (i == 11) {
-        //     // cout << "Char is: " << msg[57] << endl;
-        //     // cout << "Char is: " << msg[58] << endl;
-        //     // cout << "Char is: " << msg[59] << endl;
-        //     // cout << "Char is: " << msg[60] << endl;
-        //     // cout << "Char is: " << msg[61] << endl;
-        //     break;
-        // }
-
-        // if (nbytes < 255) {
-        //     string firstline(msg);
-        //     cout << firstline << endl;
-        // }
 
         if (nbytes == 0) {
             break;
@@ -292,6 +270,7 @@ int main(int argc, char** argv) {
 
         int hexadecimal;
         int checkNBytes = 0;
+        int chunkSize;
         // int total;
 
 
@@ -327,19 +306,13 @@ int main(int argc, char** argv) {
 
             if (msg[i] == '\r' && msg[i + 1] == '\n' && msg[i+2] == '\r' && msg[i+3] == '\n' && msg[i+8] == '\r') {
                 string charStr;
-                cout << "TEST: ";
-                cout << msg[i + 4];
-                cout << msg[i + 5];
-                cout << msg[i + 6];
-                cout << msg[i + 7];
-                cout << endl;
-
+               
                 charStr.push_back(msg[i + 4]);
                 charStr.push_back(msg[i + 5]);
                 charStr.push_back(msg[i + 6]);
                 charStr.push_back(msg[i + 7]);
 
-                cout << charStr << endl;
+                cout << "First hexadecimal: " << charStr << endl;
 
                 int stringLen = charStr.length();
 
@@ -349,7 +322,9 @@ int main(int argc, char** argv) {
 
                 hexadecimal = convert(str2Hexa);
                 value = hexadecimal;
-                cout << "value: " << value << endl;
+                chunkSize = hexadecimal;
+                // value-=nbytes;
+                cout << "Hexadecimal Conversion: " << chunkSize << endl;
 
 
                 // cout << "hexadecimal form of first size: " << hexadecimal << endl;
@@ -397,60 +372,16 @@ int main(int argc, char** argv) {
         }
 
 
-
-
         if (isChunked) {
 
-            cout << "nbytes: " << nbytes << endl;
-
+            if (nbytes < 255) {
+                for (int i = 0; i < nbytes; i++) {
+                    testString.push_back(msg[i]);
+                }
+            } else {
+                testString.append(msg);
+            }
     
-            if (begin) {
-                cout << "value: " << value << endl;
-
-                value-=nbytes;
-
-                if (value <= 0) {
-                    break;
-                }
-
-
-            
-            }
-
-
-
-            string s;
-            // if (nbytes < 255) {
-            //     s = "";
-            //     for (int i = 0; i < nbytes; i++) {
-            //         s+= msg;
-            //     }
-            // } else {
-                s = string(msg);
-                if (s.find("transfer-encoding: chunked") != string::npos) {
-                    if (!begin) {
-                        int index = s.find("transfer-encoding: chunked") + 36;
-           
-                        int strLength = s.size();
-                        s = s.substr(index);
-                        
-                        value-=(strLength - index);
-                        cout << "value: " << value << endl;
-                        // cout << s << endl;
-                        // cout << "index: " << index << endl;
-                        begin = true;
-                    }
-                }
-            // }
-
-            if (begin) {
-                output.open(filename, std::ios::app | std::ios::binary);
-                output << s;
-                output.close();
-            }
-
-            
-
         } else {
 
             string s;
@@ -485,5 +416,109 @@ int main(int argc, char** argv) {
         i++;
     }
 
-    cout << "total characters: " << totalNum << "ok" << endl;
+    // cout << "total characters: " << totalNum << "ok" << endl;
+
+    if (isChunked) {
+        // cout << (chunkOutput.str())[44] << endl;
+
+        // cout << testString.size() << endl;
+
+        int firstDecPos = testString.find("\r\n\r\n") + 4;
+
+        // cout << testString[firstDecPos] << endl;
+
+        cout << firstDecPos << endl;
+
+        int endline;
+
+        for (int i = firstDecPos; i < firstDecPos + 10; i++) {
+
+            if (testString[i] == '\r' && testString[i + 1] == '\n') {
+
+                cout << i << endl;
+
+                endline = i - firstDecPos;
+                break;
+
+            }
+            
+        }
+
+        // cout << testString[endline - 2] << endl;
+
+        // cout << "endline: " << endline << endl;
+
+        string firstChunk = testString.substr(firstDecPos, endline);
+
+        char str2Hexa[firstChunk.size() + 1];
+        strcpy(str2Hexa, firstChunk.c_str());
+        int firstChunkSize = convert(str2Hexa);
+
+        // for (int i = firstDecPos; i <)
+
+        
+
+        cout << firstChunkSize << endl;
+
+        testString = testString.substr(firstDecPos + endline + 2);
+
+        string finalString = testString.substr(0, firstChunkSize);
+
+        output.open(filename, ios::app| std::ios::binary);
+        output << finalString;
+        output.close();
+
+        // testString = testString.substr(firstChunkSize + 2);
+
+        cout << "HERE" << endl;
+
+        // for (int i = 0; i < 10; i++) {
+        //     cout << testString[i];
+        // }
+        // cout << endl;
+
+        // exit(0);
+
+        while (true) {
+
+            // if (testString.empty()) {
+            //     break;
+            // }
+
+            testString = testString.substr(firstChunkSize + 2);
+
+            for (int i = 0; i < 5; i++) {
+                if (testString[i] == '\r' && testString[i + 1] == '\n') {
+                    // cout << i << endl;
+                    endline = i;
+                    break;
+
+                }
+                
+            }
+
+            firstChunk = testString.substr(0, endline);
+
+            // cout << firstChunk << endl;
+
+            char str2Hexa2[firstChunk.size() + 1];
+            strcpy(str2Hexa2, firstChunk.c_str());
+            firstChunkSize = convert(str2Hexa2);
+
+            if (firstChunkSize == 0) {
+                cout << "NO" << endl;
+                break;
+            }
+
+            cout << "IN WHILE LOOP: " << firstChunkSize << endl;
+
+            testString = testString.substr(endline + 2);
+            finalString = testString.substr(0, firstChunkSize); 
+
+            output.open(filename, ios::app| std::ios::binary);
+            output << finalString;
+            output.close();
+
+        }
+    }
 }
